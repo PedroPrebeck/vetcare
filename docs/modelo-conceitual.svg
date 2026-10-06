@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1080" viewBox="0 0 960 1080">
+<rect width="960" height="1080" fill="white"/>
+<text x="30" y="32" fill="#12243f" font-family="Arial, sans-serif" font-size="26" font-weight="700">Modelo conceitual</text>
+<text x="30" y="58" fill="#53657c" font-family="Arial, sans-serif" font-size="16" font-weight="400">Entidades e relações do atendimento</text>
+<polyline points="170,200 170,380" fill="none" stroke="#087f8c" stroke-width="2"/>
+<text x="180" y="223" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">1</text>
+<text x="180" y="367" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">0..N</text>
+<polyline points="310,480 350,480" fill="none" stroke="#087f8c" stroke-width="2"/>
+<text x="319" y="469" fill="#12243f" font-family="Arial, sans-serif" font-size="13" font-weight="400">1</text>
+<text x="314" y="507" fill="#12243f" font-family="Arial, sans-serif" font-size="13" font-weight="400">0..N</text>
+<polyline points="490,200 490,380" fill="none" stroke="#087f8c" stroke-width="2"/>
+<text x="502" y="223" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">1</text>
+<text x="502" y="365" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">0..N</text>
+<polyline points="810,200 810,325 650,325 650,440 630,440" fill="none" stroke="#087f8c" stroke-width="2"/>
+<text x="822" y="223" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">1</text>
+<text x="651" y="429" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">0..N</text>
+<polyline points="430,490 430,770 320,770 320,820" fill="none" stroke="#087f8c" stroke-width="2"/>
+<text x="437" y="514" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">1</text>
+<text x="330" y="807" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">0..1</text>
+<polyline points="550,490 550,750 660,750 660,820" fill="none" stroke="#087f8c" stroke-width="2"/>
+<text x="558" y="514" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">1</text>
+<text x="670" y="807" fill="#12243f" font-family="Arial, sans-serif" font-size="15" font-weight="400">0..N</text>
+<rect x="30" y="90" width="280" height="110" rx="8" fill="#ffffff" stroke="#dfe7ef" stroke-width="1.4"/>
+<rect x="30" y="90" width="280" height="44" rx="8" fill="#e6f5f7" stroke="#dfe7ef" stroke-width="1.4"/>
+<text x="44" y="119" fill="#12243f" font-family="Arial, sans-serif" font-size="21" font-weight="700">Tutores</text>
+<text x="44" y="170" fill="#53657c" font-family="Arial, sans-serif" font-size="15" font-weight="400">Responsável pelo animal</text>
+<rect x="30" y="380" width="280" height="110" rx="8" fill="#ffffff" stroke="#dfe7ef" stroke-width="1.4"/>
+<rect x="30" y="380" width="280" height="44" rx="8" fill="#e6f5f7" stroke="#dfe7ef" stroke-width="1.4"/>
+<text x="44" y="409" fill="#12243f" font-family="Arial, sans-serif" font-size="21" font-weight="700">Animais</text>
+<text x="44" y="460" fill="#53657c" font-family="Arial, sans-serif" font-size="15" font-weight="400">Paciente da clínica</text>
+<rect x="350" y="90" width="280" height="110" rx="8" fill="#ffffff" stroke="#dfe7ef" stroke-width="1.4"/>
+<rect x="350" y="90" width="280" height="44" rx="8" fill="#e6f5f7" stroke="#dfe7ef" stroke-width="1.4"/>
+<text x="364" y="119" fill="#12243f" font-family="Arial, sans-serif" font-size="21" font-weight="700">Veterinários</text>
+<text x="364" y="170" fill="#53657c" font-family="Arial, sans-serif" font-size="15" font-weight="400">Profissional do atendimento</text>
+<rect x="670" y="90" width="280" height="110" rx="8" fill="#ffffff" stroke="#dfe7ef" stroke-width="1.4"/>
+<rect x="670" y="90" width="280" height="44" rx="8" fill="#e6f5f7" stroke="#dfe7ef" stroke-width="1.4"/>
+<text x="684" y="119" fill="#12243f" font-family="Arial, sans-serif" font-size="21" font-weight="700">Serviços</text>
+<text x="684" y="170" fill="#53657c" font-family="Arial, sans-serif" font-size="15" font-weight="400">Catálogo de procedimentos</text>
+<rect x="350" y="380" width="280" height="110" rx="8" fill="#ffffff" stroke="#dfe7ef" stroke-width="1.4"/>
+<rect x="350" y="380" width="280" height="44" rx="8" fill="#e6f5f7" stroke="#dfe7ef" stroke-width="1.4"/>
+<text x="364" y="409" fill="#12243f" font-family="Arial, sans-serif" font-size="21" font-weight="700">Consultas</text>
+<text x="364" y="460" fill="#53657c" font-family="Arial, sans-serif" font-size="15" font-weight="400">Compromisso da agenda</text>
+<rect x="180" y="820" width="280" height="110" rx="8" fill="#ffffff" stroke="#dfe7ef" stroke-width="1.4"/>
+<rect x="180" y="820" width="280" height="44" rx="8" fill="#e6f5f7" stroke="#dfe7ef" stroke-width="1.4"/>
+<text x="194" y="849" fill="#12243f" font-family="Arial, sans-serif" font-size="21" font-weight="700">Prontuários</text>
+<text x="194" y="900" fill="#53657c" font-family="Arial, sans-serif" font-size="15" font-weight="400">Registro do atendimento</text>
+<rect x="520" y="820" width="280" height="110" rx="8" fill="#ffffff" stroke="#dfe7ef" stroke-width="1.4"/>
+<rect x="520" y="820" width="280" height="44" rx="8" fill="#e6f5f7" stroke="#dfe7ef" stroke-width="1.4"/>
+<text x="534" y="849" fill="#12243f" font-family="Arial, sans-serif" font-size="21" font-weight="700">Pagamentos</text>
+<text x="534" y="900" fill="#53657c" font-family="Arial, sans-serif" font-size="15" font-weight="400">Recebimento vinculado</text>
+</svg>

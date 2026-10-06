@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf }}" />
+    <meta
+      name="description"
+      content="VetCare: agenda, pacientes e atendimentos veterinários."
+    />
+    <title>VetCare | Clínica veterinária</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script type="module" src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Ir para o conteúdo</a>
+    <aside class="sidebar" aria-label="Navegação principal">
+      <a class="brand" href="#overview"
+        ><span class="brand-mark">V</span>VetCare</a
+      >
+      <nav id="navigation"></nav>
+      <div class="sidebar-foot">
+        <strong>Clínica VetCare</strong><span>Gestão local</span
+        ><a href="#documentation">Documentação do projeto</a>
+      </div>
+    </aside>
+    <main id="main" tabindex="-1">
+      <header class="page-header">
+        <div>
+          <h1 id="page-title">Visão geral</h1>
+          <p id="page-subtitle"></p>
+        </div>
+        <div id="page-action"></div>
+      </header>
+      <div id="content" aria-busy="true">
+        <div class="empty">Carregando a clínica...</div>
+      </div>
+      <footer class="app-footer">
+        VetCare <span>Agenda e cuidado em um só lugar</span>
+      </footer>
+    </main>
+    <dialog id="modal" aria-labelledby="modal-title">
+      <div id="modal-content"></div>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
