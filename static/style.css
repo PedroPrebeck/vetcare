@@ -1002,3 +1002,5 @@ dialog::backdrop {
   background: #eee9ff;
   color: #6950a7;
 }
+
+.demo-notice { margin: 0 0 22px; padding: 12px 16px; border: 1px solid #b5d6cf; border-radius: 12px; background: #edf8f5; color: #255c50; font-size: .85rem; line-height: 1.5; }

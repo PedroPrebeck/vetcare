@@ -21,11 +21,12 @@
       >
       <nav id="navigation"></nav>
       <div class="sidebar-foot">
-        <strong>Clínica VetCare</strong><span>Gestão local</span
+        <strong>Clínica VetCare</strong><span>{{ 'Demonstração online' if cloud else 'Gestão local' }}</span
         ><a href="#documentation">Documentação do projeto</a>
       </div>
     </aside>
     <main id="main" tabindex="-1">
+      {% if cloud %}<p class="demo-notice">Demonstração acadêmica. Use apenas dados fictícios. Os cadastros são compartilhados entre os acessos.</p>{% endif %}
       <header class="page-header">
         <div>
           <h1 id="page-title">Visão geral</h1>

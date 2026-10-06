@@ -9,6 +9,11 @@ ROOT = Path(__file__).resolve().parent
 
 def get_db():
     if "db" not in g:
+        if current_app.config.get("CLOUD_DATABASE"):
+            from cloud_db import open_cloud_database
+
+            g.db = open_cloud_database()
+            return g.db
         g.db = sqlite3.connect(current_app.config["DATABASE"], timeout=10)
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")

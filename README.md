@@ -101,8 +101,14 @@ O gerador lê o esquema real para produzir o dicionário de dados. O texto princ
 
 ## Uso local e hospedagem
 
-Esta versão foi escolhida para demonstração local. O servidor escuta somente em `127.0.0.1`, sem modo debug. Não há login ou separação de permissões. Use dados fictícios na apresentação.
+Localmente, o servidor escuta em `127.0.0.1`, sem debug, e usa um arquivo SQLite com journal WAL. Não há login ou restrições por perfil. Use dados fictícios.
 
-A Vercel não deve ser usada para gravar este arquivo SQLite como banco persistente em funções. Uma publicação online exige um backend com armazenamento persistente ou uma mudança para um serviço SQLite remoto. Essa migração fica fora da entrega local. O frontend pode ser adaptado depois, mantendo a modelagem como referência.
+Na Vercel, o mesmo esquema SQLite é aberto em memória a cada requisição e persistido como arquivo em um Blob **privado**. Leituras sem cache consultam a versão atual. Gravações condicionais por ETag recusam atualizações concorrentes com HTTP 409, sem sobrescrever a alteração já salva. A interface só informa sucesso depois da confirmação do armazenamento. Falhas de armazenamento retornam HTTP 503.
 
-Configurações opcionais: `VETCARE_DATABASE` altera o arquivo de banco, `VETCARE_SECRET` define a chave de sessão e `PORT` altera a porta. Sem uma chave configurada, a sessão é recriada a cada reinício do servidor. Nunca comite segredos ou bancos com dados pessoais.
+O projeto está conectado ao GitHub. Configure um Blob privado em São Paulo e conecte-o ao projeto, em Production e Preview, usando OIDC. A Vercel injeta `BLOB_STORE_ID` e a identidade da função. Não é necessário copiar um token permanente. `vercel.json` seleciona Flask e a região `gru1`. O banco é inicializado com dados fictícios apenas quando não existe. Production e Preview usam arquivos separados.
+
+Essa hospedagem serve à apresentação acadêmica com poucos acessos. Cada gravação transfere o banco completo, limitado a 4 MiB. Ela não substitui um servidor de banco para uma clínica em produção. Os cadastros online são compartilhados. As cotas do plano Hobby se aplicam às funções, às operações e às transferências do Blob.
+
+Configurações locais: `VETCARE_DATABASE` altera o arquivo de banco, `VETCARE_SECRET` define a chave de sessão e `PORT` altera a porta. Na nuvem, a proteção CSRF usa um cookie `__Host-`, Secure, HttpOnly e SameSite=Strict, comparado ao cabeçalho enviado pela interface. Assim, ela não depende de uma chave aleatória diferente em cada função. Nunca comite segredos ou bancos com dados pessoais.
+
+Detalhes e fontes: [docs/hospedagem-vercel.md](docs/hospedagem-vercel.md).

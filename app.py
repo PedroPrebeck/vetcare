@@ -4,7 +4,16 @@ import os
 import secrets
 from pathlib import Path
 import click
-from flask import Flask, jsonify, render_template, request, session, send_from_directory
+from flask import (
+    Flask,
+    g,
+    jsonify,
+    render_template,
+    request,
+    session,
+    send_from_directory,
+)
+from cloud_db import StorageConflict, StorageUnavailable, persist_cloud_database
 from db import ROOT, close_db, initialize
 
 
@@ -18,6 +27,7 @@ def create_app(config=None):
         MAX_CONTENT_LENGTH=64 * 1024,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Strict",
+        CLOUD_DATABASE=os.environ.get("VERCEL") == "1",
     )
     if config:
         app.config.update(config)
@@ -34,13 +44,40 @@ def create_app(config=None):
             "PATCH",
             "DELETE",
         ):
-            if request.headers.get("X-CSRF-Token") != session.get(
-                "csrf"
-            ) or not session.get("csrf"):
+            csrf = (
+                request.cookies.get("__Host-vetcare-csrf")
+                if app.config["CLOUD_DATABASE"]
+                else session.get("csrf")
+            )
+            if not csrf or not secrets.compare_digest(
+                request.headers.get("X-CSRF-Token", ""), csrf
+            ):
                 return jsonify(error="Sessão expirada. Recarregue a página."), 403
 
     @app.after_request
     def security_headers(response):
+        if app.config["CLOUD_DATABASE"]:
+            try:
+                response = persist_cloud_database(response)
+            except StorageConflict:
+                response = jsonify(
+                    error="Outro acesso alterou os dados. Recarregue e tente novamente."
+                )
+                response.status_code = 409
+            except StorageUnavailable:
+                response = jsonify(
+                    error="Não foi possível confirmar a gravação. Recarregue antes de tentar novamente."
+                )
+                response.status_code = 503
+            if g.get("cloud_csrf"):
+                response.set_cookie(
+                    "__Host-vetcare-csrf",
+                    g.cloud_csrf,
+                    secure=True,
+                    httponly=True,
+                    samesite="Strict",
+                    path="/",
+                )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["Content-Security-Policy"] = (
@@ -52,8 +89,25 @@ def create_app(config=None):
 
     @app.get("/")
     def index():
+        if app.config["CLOUD_DATABASE"]:
+            csrf = request.cookies.get("__Host-vetcare-csrf") or secrets.token_hex(32)
+            g.cloud_csrf = csrf
+            return render_template("index.html", csrf=csrf, cloud=True)
         session.setdefault("csrf", secrets.token_hex(32))
         return render_template("index.html", csrf=session["csrf"])
+
+    @app.errorhandler(StorageUnavailable)
+    def storage_unavailable(_error):
+        return jsonify(error="Armazenamento indisponível. Tente novamente."), 503
+
+    @app.errorhandler(StorageConflict)
+    def storage_conflict(_error):
+        return (
+            jsonify(
+                error="Outro acesso alterou os dados. Recarregue e tente novamente."
+            ),
+            409,
+        )
 
     @app.get("/docs/<path:filename>")
     def documentation(filename):

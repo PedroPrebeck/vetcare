@@ -1,0 +1,8 @@
+.git
+.qa
+.venv
+__pycache__
+instance
+tests
+scripts
+requirements-docs.txt

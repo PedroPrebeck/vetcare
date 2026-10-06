@@ -6,7 +6,7 @@ Documentação técnica para projeto de Banco de Dados. Versão 1.0, outubro de 
 
 Uma clínica veterinária precisa relacionar o animal atendido ao seu responsável, ao profissional que realiza a consulta e ao serviço prestado. Agenda, prontuário e recebimento pertencem ao mesmo processo, mas registram fatos diferentes. O horário de uma consulta pode mudar antes do atendimento; o prontuário descreve o que foi observado; o pagamento informa quanto foi recebido e quando.
 
-O VetCare organiza esse processo em uma aplicação web local. O projeto usa SQLite para apresentar a passagem do modelo de dados ao banco físico, com restrições, consultas e transações que podem ser examinadas diretamente. A interface permite executar as operações sem exigir comandos SQL do usuário da clínica.
+O VetCare organiza esse processo em uma aplicação web com execução local e demonstração online. O projeto usa SQLite para apresentar a passagem do modelo de dados ao banco físico, com restrições, consultas e transações que podem ser examinadas diretamente. A interface permite executar as operações sem exigir comandos SQL do usuário da clínica.
 
 Os registros iniciais são fictícios e servem à apresentação. O projeto não pretende substituir um sistema clínico em produção. Seu escopo é uma clínica, sem estoque, contas de usuário, faturamento fiscal ou estornos.
 
@@ -327,7 +327,7 @@ O banco padrão fica em instance/vetcare.sqlite3. VETCARE_DATABASE permite escol
 
 backup-db cria uma cópia consistente pela API SQLite e recusa sobrescrever um destino existente. Copiar apenas o arquivo principal enquanto o servidor escreve pode perder dados ainda no WAL; por isso o projeto fornece um comando de backup [5]. Para restaurar, pare o servidor e configure o arquivo de backup como banco de execução.
 
-A versão entregue roda localmente e escuta somente em 127.0.0.1. Uma função da Vercel não oferece o arquivo permanente compartilhado necessário para esse SQLite local [6]. Uma publicação online exige armazenamento persistente no backend ou migração para um serviço SQLite remoto. Essa implantação não integra o escopo local.
+Localmente, o servidor escuta em 127.0.0.1 e persiste o arquivo SQLite no computador. Na Vercel, o esquema permanece SQLite, mas cada requisição abre uma imagem em memória, obtida de um Blob privado. Leituras sem cache e gravações condicionais por ETag evitam leituras antigas e sobrescritas concorrentes [7]. O armazenamento usa OIDC e arquivos separados para Production e Preview. O limite da imagem é 4 MiB. Essa configuração atende à demonstração acadêmica, com transferência integral do banco por gravação. Não foi feito teste de carga para uma clínica em produção. Consulte docs/hospedagem-vercel.md para o fluxo e os limites.
 
 ## 15. Verificação e limites
 
@@ -354,3 +354,5 @@ Esses limites definem o que a versão demonstra e o que deve ser modelado antes 
 [5] Python Software Foundation. sqlite3: Connection.backup. https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.backup. Acesso em 6 out. 2026.
 
 [6] Vercel. Is SQLite supported in Vercel? https://vercel.com/kb/guide/is-sqlite-supported-in-vercel. Acesso em 6 out. 2026.
+
+[7] Vercel. Vercel Blob SDK e leituras consistentes. https://vercel.com/docs/vercel-blob/using-blob-sdk e https://vercel.com/changelog/vercel-blob-now-supports-consistent-reads-on-private-storage. Acesso em 6 out. 2026.

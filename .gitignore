@@ -5,3 +5,5 @@ instance/
 .env
 .DS_Store
 .qa/
+.vercel/
+.env.*
