@@ -3,10 +3,10 @@ PRAGMA foreign_keys=ON;
 
 -- Q1: agenda do dia, com JOIN entre as entidades do atendimento.
 SELECT a.id,substr(a.starts_at,12,5) AS horario,p.name AS animal,
- t.name AS tutor,v.name AS veterinario,s.name AS servico,a.status
+ t.name AS acompanhante,v.name AS veterinario,s.name AS servico,a.status
 FROM appointments a
 JOIN pets p ON p.id=a.pet_id
-JOIN tutors t ON t.id=p.tutor_id
+LEFT JOIN tutors t ON t.id=a.accompanying_tutor_id
 JOIN veterinarians v ON v.id=a.veterinarian_id
 JOIN services s ON s.id=a.service_id
 WHERE substr(a.starts_at,1,10)=date('now','-3 hours')
@@ -14,7 +14,8 @@ ORDER BY a.starts_at;
 
 -- Q2: animais de cada tutor. LEFT JOIN inclui quem não tem animal cadastrado.
 SELECT t.id,t.name,COUNT(p.id) AS animais_ativos
-FROM tutors t LEFT JOIN pets p ON p.tutor_id=t.id AND p.active=1
+FROM tutors t LEFT JOIN pet_tutors pt ON pt.tutor_id=t.id AND pt.active=1
+ LEFT JOIN pets p ON p.id=pt.pet_id AND p.active=1
 GROUP BY t.id,t.name ORDER BY animais_ativos DESC,t.name;
 
 -- Q3: receita por forma de pagamento no mês corrente.
@@ -25,12 +26,12 @@ WHERE substr(paid_at,1,7)=strftime('%Y-%m','now','-3 hours')
 GROUP BY method ORDER BY recebido_reais DESC;
 
 -- Q4: consultas concluídas com saldo. A view agrega pagamentos uma única vez.
-SELECT a.id,p.name AS animal,t.name AS tutor,
+SELECT a.id,p.name AS animal,t.name AS acompanhante,
  a.fee_cents / 100.0 AS valor_reais,
  a.received_cents / 100.0 AS recebido_reais,
  a.balance_cents / 100.0 AS saldo_reais
 FROM appointment_balances a
-JOIN pets p ON p.id=a.pet_id JOIN tutors t ON t.id=p.tutor_id
+JOIN pets p ON p.id=a.pet_id LEFT JOIN tutors t ON t.id=a.accompanying_tutor_id
 WHERE a.status='Concluído' AND a.balance_cents>0
 ORDER BY a.starts_at;
 
