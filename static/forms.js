@@ -56,15 +56,7 @@ export function masterForm(table, data, record = null) {
         autofocus: true,
         maxlength: 80,
       }) +
-      field("tutor_id", "Tutor", r.tutor_id, {
-        required: true,
-        options: [
-          ["", "Selecione um tutor"],
-          ...data.tutors
-            .filter((x) => x.active || x.id === r.tutor_id)
-            .map((x) => [x.id, x.name]),
-        ],
-      }) +
+      `<fieldset class="field wide tutor-picker"><legend>Tutores *</legend><p class="hint">Selecione todos os responsáveis pelo pet. Na consulta, você escolherá quem o acompanha.</p><div class="tutor-options">${data.tutors.filter(t => t.active).map(t => `<label class="check-label"><input type="checkbox" name="tutor_ids" value="${t.id}" ${(r.tutor_ids || []).includes(t.id) ? "checked" : ""}>${e(t.name)}</label>`).join("") || '<p>Cadastre um tutor ativo antes de cadastrar o pet.</p>'}</div></fieldset>` +
       field("species", "Espécie", r.species || "Cão", {
         required: true,
         options: ["Cão", "Gato", "Ave", "Outro"].map((x) => [x, x]),
@@ -134,6 +126,20 @@ export function masterForm(table, data, record = null) {
     record ? "PATCH" : "POST",
   );
 }
+function companionOptions(data, petId) {
+  const pet = data.pets.find(p => p.id === Number(petId));
+  return [["", "Selecione quem acompanha o pet"], ...data.tutors.filter(t => t.active && pet?.tutor_ids.includes(t.id)).map(t => [t.id, t.name])];
+}
+function companionField(data, petId, selected) {
+  return field("accompanying_tutor_id", "Tutor acompanhante", selected || "", {
+    required: true, wide: true, options: companionOptions(data, petId),
+    hint: "Pessoa que acompanha o paciente nesta consulta.",
+  });
+}
+export function updateCompanionOptions(data, petId) {
+  const select = document.querySelector("#field-accompanying_tutor_id");
+  if (select) select.innerHTML = options(companionOptions(data, petId), "");
+}
 export function appointmentForm(data, record = null, day = null) {
   const r = record || {};
   const fields =
@@ -148,6 +154,7 @@ export function appointmentForm(data, record = null, day = null) {
           .map((p) => [p.id, `${p.name} · ${p.tutor_name}`]),
       ],
     }) +
+    companionField(data, r.pet_id, r.accompanying_tutor_id) +
     field("veterinarian_id", "Veterinário", r.veterinarian_id, {
       required: true,
       options: [
@@ -188,6 +195,7 @@ export function recordForm(data, appointment) {
   const pet = data.pets.find((p) => p.id === appointment.pet_id);
   form(
     `Atendimento de ${appointment.pet_name}`,
+    companionField(data, appointment.pet_id, appointment.accompanying_tutor_id) +
     field("complaint", "Queixa / motivo da consulta", "", {
       required: true,
       autofocus: true,

@@ -1004,3 +1004,8 @@ dialog::backdrop {
 }
 
 .demo-notice { margin: 0 0 22px; padding: 12px 16px; border: 1px solid #b5d6cf; border-radius: 12px; background: #edf8f5; color: #255c50; font-size: .85rem; line-height: 1.5; }
+
+.tutor-picker { border: 1px solid #dbe4ec; border-radius: 12px; padding: 14px; min-width: 0; }
+.tutor-picker legend { padding: 0 6px; font-weight: 600; }
+.tutor-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; max-height: 220px; overflow-y: auto; margin-top: 12px; }
+.tutor-options input { width: auto; }

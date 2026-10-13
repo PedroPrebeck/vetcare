@@ -35,7 +35,7 @@ function appointmentRows(items, full = false) {
   return items
     .map(
       (a) =>
-        `<tr><td class="number">${full ? `${dateLabel(a.starts_at)}<span class="meta">${a.starts_at.slice(11)} · ${a.duration_minutes} min</span>` : a.starts_at.slice(11)}</td><td>${animal(a)}</td><td>${e(a.tutor_name)}</td><td>${e(a.veterinarian_name)}</td><td>${e(a.service_name)}</td><td>${badge(a.status)}</td><td><div class="actions">${iconButton("Ver consulta de " + a.pet_name, "appointment-detail", a.id, null, "eye")}${["Agendado", "Confirmado"].includes(a.status) ? iconButton("Editar consulta de " + a.pet_name, "edit-appointment", a.id, null, "edit") : ""}</div></td></tr>`,
+        `<tr><td class="number">${full ? `${dateLabel(a.starts_at)}<span class="meta">${a.starts_at.slice(11)} · ${a.duration_minutes} min</span>` : a.starts_at.slice(11)}</td><td>${animal(a)}</td><td>${e(a.tutor_name || "Acompanhante não registrado")}</td><td>${e(a.veterinarian_name)}</td><td>${e(a.service_name)}</td><td>${badge(a.status)}</td><td><div class="actions">${iconButton("Ver consulta de " + a.pet_name, "appointment-detail", a.id, null, "eye")}${["Agendado", "Confirmado"].includes(a.status) ? iconButton("Editar consulta de " + a.pet_name, "edit-appointment", a.id, null, "edit") : ""}</div></td></tr>`,
     )
     .join("");
 }
@@ -54,7 +54,7 @@ export function overview(data) {
     .slice()
     .reverse()
     .slice(0, 4);
-  return `<div class="metrics">${metric("Consultas hoje", d.appointments_today, "calendar")}${metric("Pacientes ativos", d.patients, "paw")}${metric("Receita do mês", money(d.revenue_month_cents), "chart", "Recebimentos registrados")}${metric("Em aberto", money(d.outstanding_cents), "file", "Consultas concluídas")}</div><div class="dashboard-grid">${panel("Agenda de hoje", table(["Horário", "Animal", "Tutor", "Veterinário", "Serviço", "Status", "Ações"], appointmentRows(today), "Nenhuma consulta para hoje."), `<span class="muted">${dateLabel(d.today)}</span>`)}${panel("Próximas consultas", `<div class="timeline">${upcoming.map((a) => `<div class="timeline-item"><div class="timeline-time">${a.starts_at.slice(11)}<span class="meta">${dateLabel(a.starts_at).slice(0, 5)}</span></div>${avatar(a.pet_name, a.pet_id)}<div><span class="name">${e(a.pet_name)}</span><p>${e(a.tutor_name)}</p><p>${e(a.service_name)}</p></div></div>`).join("") || '<div class="empty">A agenda está livre.</div>'}</div><div class="timeline-foot"><a class="btn" href="#agenda">Ver agenda completa</a></div>`)}</div>${panel("Últimos atendimentos", table(["Animal", "Tutor", "Data", "Serviço", "Veterinário", "Status", "Ações"], recent.map((a) => `<tr><td>${animal(a)}</td><td>${e(a.tutor_name)}</td><td>${dateLabel(a.starts_at)}</td><td>${e(a.service_name)}</td><td>${e(a.veterinarian_name)}</td><td>${badge(a.status)}</td><td>${iconButton("Ver histórico de " + a.pet_name, "history", a.pet_id, null, "eye")}</td></tr>`).join(""), "Nenhum atendimento concluído."), '<a class="btn small" href="#pets">Ver pacientes</a>')}`;
+  return `<div class="metrics">${metric("Consultas hoje", d.appointments_today, "calendar")}${metric("Pacientes ativos", d.patients, "paw")}${metric("Receita do mês", money(d.revenue_month_cents), "chart", "Recebimentos registrados")}${metric("Em aberto", money(d.outstanding_cents), "file", "Consultas concluídas")}</div><div class="dashboard-grid">${panel("Agenda de hoje", table(["Horário", "Animal", "Acompanhante", "Veterinário", "Serviço", "Status", "Ações"], appointmentRows(today), "Nenhuma consulta para hoje."), `<span class="muted">${dateLabel(d.today)}</span>`)}${panel("Próximas consultas", `<div class="timeline">${upcoming.map((a) => `<div class="timeline-item"><div class="timeline-time">${a.starts_at.slice(11)}<span class="meta">${dateLabel(a.starts_at).slice(0, 5)}</span></div>${avatar(a.pet_name, a.pet_id)}<div><span class="name">${e(a.pet_name)}</span><p>${e(a.tutor_name || "Acompanhante não registrado")}</p><p>${e(a.service_name)}</p></div></div>`).join("") || '<div class="empty">A agenda está livre.</div>'}</div><div class="timeline-foot"><a class="btn" href="#agenda">Ver agenda completa</a></div>`)}</div>${panel("Últimos atendimentos", table(["Animal", "Acompanhante", "Data", "Serviço", "Veterinário", "Status", "Ações"], recent.map((a) => `<tr><td>${animal(a)}</td><td>${e(a.tutor_name || "Acompanhante não registrado")}</td><td>${dateLabel(a.starts_at)}</td><td>${e(a.service_name)}</td><td>${e(a.veterinarian_name)}</td><td>${badge(a.status)}</td><td>${iconButton("Ver histórico de " + a.pet_name, "history", a.pet_id, null, "eye")}</td></tr>`).join(""), "Nenhum atendimento concluído."), '<a class="btn small" href="#pets">Ver pacientes</a>')}`;
 }
 export function agenda(data, state) {
   let items = data.appointments.filter(
@@ -63,7 +63,7 @@ export function agenda(data, state) {
       (!state.status || a.status === state.status) &&
       match(a, state.query),
   );
-  return `<section class="panel"><div class="toolbar"><input type="search" id="search" placeholder="Buscar animal, tutor ou veterinário" aria-label="Buscar na agenda" value="${e(state.query)}"><label for="agenda-date">Data</label><input type="date" id="agenda-date" value="${e(state.agendaDate)}"><select id="status-filter" aria-label="Filtrar por status"><option value="">Todos os status</option>${["Agendado", "Confirmado", "Concluído", "Cancelado"].map((s) => `<option ${state.status === s ? "selected" : ""}>${s}</option>`).join("")}</select>${button("Todas as datas", "all-dates", { style: "small" })}</div><div class="summary-strip"><span>${items.length} ${items.length === 1 ? "consulta" : "consultas"}</span><span>Total previsto<strong>${money(items.filter((a) => a.status !== "Cancelado").reduce((sum, a) => sum + a.fee_cents, 0))}</strong></span></div>${table(["Data / hora", "Animal", "Tutor", "Veterinário", "Serviço", "Status", "Ações"], appointmentRows(items, true), "Nenhuma consulta com esses filtros.")}</section>`;
+  return `<section class="panel"><div class="toolbar"><input type="search" id="search" placeholder="Buscar animal, tutor ou veterinário" aria-label="Buscar na agenda" value="${e(state.query)}"><label for="agenda-date">Data</label><input type="date" id="agenda-date" value="${e(state.agendaDate)}"><select id="status-filter" aria-label="Filtrar por status"><option value="">Todos os status</option>${["Agendado", "Confirmado", "Concluído", "Cancelado"].map((s) => `<option ${state.status === s ? "selected" : ""}>${s}</option>`).join("")}</select>${button("Todas as datas", "all-dates", { style: "small" })}</div><div class="summary-strip"><span>${items.length} ${items.length === 1 ? "consulta" : "consultas"}</span><span>Total previsto<strong>${money(items.filter((a) => a.status !== "Cancelado").reduce((sum, a) => sum + a.fee_cents, 0))}</strong></span></div>${table(["Data / hora", "Animal", "Acompanhante", "Veterinário", "Serviço", "Status", "Ações"], appointmentRows(items, true), "Nenhuma consulta com esses filtros.")}</section>`;
 }
 export function master(data, state, page) {
   const items = data[page].filter(
@@ -73,7 +73,7 @@ export function master(data, state, page) {
     `<div class="actions">${page === "pets" ? iconButton("Histórico de " + r.name, "history", r.id, null, "eye") : ""}${iconButton("Editar " + r.name, "edit-master", r.id, page, "edit")}${iconButton((r.active ? "Arquivar " : "Reativar ") + r.name, "archive-master", r.id, page, r.active ? "archive" : "check")}</div>`;
   let headers, body;
   if (page === "pets") {
-    headers = ["Animal", "Tutor", "Sexo", "Peso", "Situação", "Ações"];
+    headers = ["Animal", "Tutores", "Sexo", "Peso", "Situação", "Ações"];
     body = items
       .map(
         (r) =>
@@ -93,7 +93,7 @@ export function master(data, state, page) {
     body = items
       .map(
         (r) =>
-          `<tr><td><span class="name">${e(r.name)}</span></td><td>${e(r.phone)}<span class="meta">${e(r.email || "")}</span></td><td>${e(r.address || "Não informado")}</td><td>${data.pets.filter((p) => p.tutor_id === r.id && p.active).length}</td><td>${badge(r.active ? "Ativo" : "Arquivado")}</td><td>${actions(r)}</td></tr>`,
+          `<tr><td><span class="name">${e(r.name)}</span></td><td>${e(r.phone)}<span class="meta">${e(r.email || "")}</span></td><td>${e(r.address || "Não informado")}</td><td>${data.pets.filter((p) => p.tutor_ids.includes(r.id) && p.active).length}</td><td>${badge(r.active ? "Ativo" : "Arquivado")}</td><td>${actions(r)}</td></tr>`,
       )
       .join("");
   }
@@ -131,19 +131,19 @@ export function finance(data, state) {
   let body;
   if (state.financeTab === "payments")
     body = table(
-      ["Data", "Animal", "Tutor", "Forma", "Valor"],
+      ["Data", "Animal", "Acompanhante", "Forma", "Valor"],
       data.payments
         .filter((p) => match(p, state.query))
         .map(
           (p) =>
-            `<tr><td>${dateLabel(p.paid_at)}</td><td><span class="name">${e(p.pet_name)}</span></td><td>${e(p.tutor_name)}</td><td>${e(p.method)}</td><td class="number">${money(p.amount_cents)}</td></tr>`,
+            `<tr><td>${dateLabel(p.paid_at)}</td><td><span class="name">${e(p.pet_name)}</span></td><td>${e(p.tutor_name || "Acompanhante não registrado")}</td><td>${e(p.method)}</td><td class="number">${money(p.amount_cents)}</td></tr>`,
         )
         .join(""),
       "Nenhum recebimento registrado.",
     );
   else
     body = table(
-      ["Consulta", "Animal", "Tutor", "Valor", "Recebido", "Saldo", "Ações"],
+      ["Consulta", "Animal", "Acompanhante", "Valor", "Recebido", "Saldo", "Ações"],
       data.appointments
         .filter(
           (a) =>
@@ -153,7 +153,7 @@ export function finance(data, state) {
         )
         .map(
           (a) =>
-            `<tr><td>${dateLabel(a.starts_at)}<span class="meta">${e(a.service_name)} · ${e(a.status)}</span></td><td>${animal(a)}</td><td>${e(a.tutor_name)}</td><td>${money(a.fee_cents)}</td><td>${money(a.received_cents)}</td><td><strong class="number">${money(a.balance_cents)}</strong></td><td>${button("Receber", "payment", { id: a.id, style: "small", icon: "wallet" })}</td></tr>`,
+            `<tr><td>${dateLabel(a.starts_at)}<span class="meta">${e(a.service_name)} · ${e(a.status)}</span></td><td>${animal(a)}</td><td>${e(a.tutor_name || "Acompanhante não registrado")}</td><td>${money(a.fee_cents)}</td><td>${money(a.received_cents)}</td><td><strong class="number">${money(a.balance_cents)}</strong></td><td>${button("Receber", "payment", { id: a.id, style: "small", icon: "wallet" })}</td></tr>`,
         )
         .join(""),
       "Nenhuma consulta com saldo pendente.",
@@ -161,5 +161,5 @@ export function finance(data, state) {
   return `<div class="metrics financial-metrics">${metric("Recebido no mês", money(data.dashboard.revenue_month_cents), "chart")}${metric("Total recebido", money(income), "wallet")}${metric("Em aberto", money(outstanding.reduce((s, a) => s + a.balance_cents, 0)), "file", "Somente consultas concluídas")}</div><section class="panel"><div class="tabs" role="group" aria-label="Visão financeira"><button class="${state.financeTab === "balances" ? "active" : ""}" data-action="finance-tab" data-tab="balances">Saldos das consultas</button><button class="${state.financeTab === "payments" ? "active" : ""}" data-action="finance-tab" data-tab="payments">Recebimentos</button></div><div class="toolbar"><input type="search" id="search" value="${e(state.query)}" aria-label="Buscar no financeiro" placeholder="Buscar animal ou tutor"><span class="muted">${state.financeTab === "balances" ? "Consultas agendadas também podem receber adiantamentos." : "Valores efetivamente recebidos."}</span></div>${body}</section>`;
 }
 export function documentation() {
-  return `<div class="docs-grid"><section class="panel prose"><h2>Sobre o projeto</h2><p>O VetCare reúne os cadastros e os atendimentos de uma clínica veterinária. Cada consulta liga um animal, um veterinário e um serviço. O atendimento gera um prontuário, e os recebimentos ficam vinculados à consulta.</p><p>O banco SQLite contém sete tabelas. Chaves estrangeiras mantêm os vínculos, triggers bloqueiam conflitos de horário e pagamentos acima do saldo, e uma view calcula os valores pendentes.</p><h3>Para apresentar o sistema</h3><ol><li>Cadastre um tutor e seu animal.</li><li>Agende uma consulta e tente repetir o horário.</li><li>Conclua o atendimento preenchendo o prontuário.</li><li>Registre um pagamento parcial e confira o saldo.</li><li>Abra o histórico do paciente.</li></ol><p>Os dados iniciais são fictícios. Esta versão permite execução local e demonstração acadêmica online. Ela não inclui contas de usuário, estoque ou estornos.</p></section><section class="panel"><div class="panel-head"><h2>Material técnico</h2></div><div class="doc-links"><a class="btn" href="/docs/relatorio-tecnico.pdf" target="_blank" rel="noopener">${icon("book")}Relatório técnico em PDF</a><a class="btn" href="/docs/modelagem.svg" target="_blank" rel="noopener">${icon("file")}Diagrama do banco</a><a class="btn" href="/docs/documentacao.md" target="_blank" rel="noopener">${icon("file")}Documentação em Markdown</a></div><div class="panel-body"><h3>Stack</h3><p class="muted">Python, Flask e SQLite<br>HTML, CSS e JavaScript<br>Sem compilação do frontend</p></div></section></div>`;
+  return `<div class="docs-grid"><section class="panel prose"><h2>Sobre o projeto</h2><p>O VetCare reúne os cadastros e os atendimentos de uma clínica veterinária. Cada animal pode ter vários tutores. Cada consulta registra o tutor acompanhante, o animal, o veterinário e o serviço. O atendimento gera um prontuário, e os recebimentos ficam vinculados à consulta.</p><p>O banco SQLite contém oito tabelas. Chaves estrangeiras mantêm os vínculos, triggers bloqueiam conflitos de horário e pagamentos acima do saldo, e uma view calcula os valores pendentes.</p><h3>Para apresentar o sistema</h3><ol><li>Cadastre um tutor e seu animal.</li><li>Agende uma consulta e tente repetir o horário.</li><li>Conclua o atendimento preenchendo o prontuário.</li><li>Registre um pagamento parcial e confira o saldo.</li><li>Abra o histórico do paciente.</li></ol><p>Os dados iniciais são fictícios. Esta versão permite execução local e demonstração acadêmica online. Ela não inclui contas de usuário, estoque ou estornos.</p></section><section class="panel"><div class="panel-head"><h2>Material técnico</h2></div><div class="doc-links"><a class="btn" href="/docs/relatorio-tecnico.pdf" target="_blank" rel="noopener">${icon("book")}Relatório técnico em PDF</a><a class="btn" href="/docs/modelagem.svg" target="_blank" rel="noopener">${icon("file")}Diagrama do banco</a><a class="btn" href="/docs/documentacao.md" target="_blank" rel="noopener">${icon("file")}Documentação em Markdown</a></div><div class="panel-body"><h3>Stack</h3><p class="muted">Python, Flask e SQLite<br>HTML, CSS e JavaScript<br>Sem compilação do frontend</p></div></section></div>`;
 }

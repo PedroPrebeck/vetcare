@@ -9,6 +9,7 @@ import {
   documentation,
 } from "./views.js";
 import {
+  updateCompanionOptions,
   masterForm,
   appointmentForm,
   recordForm,
@@ -121,6 +122,10 @@ document.addEventListener("input", (event) => {
   }
 });
 document.addEventListener("change", (event) => {
+  if (event.target.id === "field-pet_id") {
+    updateCompanionOptions(data, event.target.value);
+    return;
+  }
   if (event.target.id === "agenda-date")
     state.agendaDate = event.target.value || null;
   else if (event.target.id === "status-filter")
@@ -136,7 +141,7 @@ async function history(id) {
     result = await request(`/pets/${id}/history`);
   showModal(
     `Histórico de ${pet.name}`,
-    `<div class="modal-body"><div class="patient-head">${animal(pet)}${badge(pet.active ? "Ativo" : "Arquivado")}</div><div class="patient-details"><div><span>Tutor</span>${e(pet.tutor_name)}</div><div><span>Nascimento</span>${dateLabel(pet.birth_date)}</div><div><span>Sexo</span>${e(pet.sex)}</div><div><span>Peso atual</span>${pet.weight_kg ?? "Não informado"}${pet.weight_kg ? " kg" : ""}</div></div>${pet.notes ? `<p>${e(pet.notes)}</p>` : ""}<h3>Prontuários</h3>${result.records.map((r) => `<article class="record"><h3>${dateLabel(r.starts_at)} · ${e(r.service_name)}</h3><span class="meta">${e(r.veterinarian_name)}${r.weight_kg ? " · " + r.weight_kg + " kg" : ""}</span><span class="record-label">Queixa</span><p>${e(r.complaint)}</p><span class="record-label">Avaliação</span><p>${e(r.diagnosis)}</p><span class="record-label">Conduta</span><p>${e(r.treatment || "Não informada")}</p></article>`).join("") || '<p class="muted">Nenhum prontuário registrado.</p>'}<h3>Consultas</h3><div class="history-list">${result.appointments.map((a) => `<div class="history-row"><span>${dateLabel(a.starts_at)} · ${a.starts_at.slice(11)}<span class="meta">${e(a.service_name)}</span></span>${badge(a.status)}</div>`).join("") || '<p class="muted">Nenhuma consulta registrada.</p>'}</div></div>`,
+    `<div class="modal-body"><div class="patient-head">${animal(pet)}${badge(pet.active ? "Ativo" : "Arquivado")}</div><div class="patient-details"><div><span>Tutores</span>${e(pet.tutor_name)}</div><div><span>Nascimento</span>${dateLabel(pet.birth_date)}</div><div><span>Sexo</span>${e(pet.sex)}</div><div><span>Peso atual</span>${pet.weight_kg ?? "Não informado"}${pet.weight_kg ? " kg" : ""}</div></div>${pet.notes ? `<p>${e(pet.notes)}</p>` : ""}<h3>Prontuários</h3>${result.records.map((r) => `<article class="record"><h3>${dateLabel(r.starts_at)} · ${e(r.service_name)}</h3><span class="meta">${e(r.veterinarian_name)} · Acompanhante: ${e(r.tutor_name || "Não registrado")}${r.weight_kg ? " · " + r.weight_kg + " kg" : ""}</span><span class="record-label">Queixa</span><p>${e(r.complaint)}</p><span class="record-label">Avaliação</span><p>${e(r.diagnosis)}</p><span class="record-label">Conduta</span><p>${e(r.treatment || "Não informada")}</p></article>`).join("") || '<p class="muted">Nenhum prontuário registrado.</p>'}<h3>Consultas</h3><div class="history-list">${result.appointments.map((a) => `<div class="history-row"><span>${dateLabel(a.starts_at)} · ${a.starts_at.slice(11)}<span class="meta">${e(a.service_name)} · Acompanhante: ${e(a.tutor_name || "Não registrado")}</span></span>${badge(a.status)}</div>`).join("") || '<p class="muted">Nenhuma consulta registrada.</p>'}</div></div>`,
   );
 }
 function appointmentDetail(id) {
@@ -145,7 +150,7 @@ function appointmentDetail(id) {
   const controls = `${button("Histórico do paciente", "history", { id: a.pet_id, icon: "eye" })}${open && a.status === "Agendado" ? button("Confirmar", "confirm-appointment", { id, icon: "check" }) : ""}${open ? button("Cancelar consulta", "cancel-appointment", { id, style: "danger" }) : ""}${a.status !== "Cancelado" && a.balance_cents > 0 ? button("Receber", "payment", { id, icon: "wallet" }) : ""}${open ? button("Atender", "record", { id, style: "primary", icon: "stethoscope" }) : ""}`;
   showModal(
     "Consulta de " + a.pet_name,
-    `<div class="modal-body"><div class="patient-head">${animal(a)}${badge(a.status)}</div><div class="patient-details"><div><span>Data e horário</span>${dateLabel(a.starts_at)} · ${a.starts_at.slice(11)}</div><div><span>Duração</span>${a.duration_minutes} min</div><div><span>Tutor</span>${e(a.tutor_name)}</div><div><span>Telefone</span>${e(a.tutor_phone)}</div><div><span>Veterinário</span>${e(a.veterinarian_name)}</div><div><span>Serviço</span>${e(a.service_name)}</div><div><span>Valor</span>${money(a.fee_cents)}</div><div><span>Saldo</span>${money(a.balance_cents)}</div></div>${a.notes ? `<p>${e(a.notes)}</p>` : ""}<p class="form-error" role="alert"></p></div>`,
+    `<div class="modal-body"><div class="patient-head">${animal(a)}${badge(a.status)}</div><div class="patient-details"><div><span>Data e horário</span>${dateLabel(a.starts_at)} · ${a.starts_at.slice(11)}</div><div><span>Duração</span>${a.duration_minutes} min</div><div><span>Acompanhante</span>${e(a.tutor_name || "Acompanhante não registrado")}</div><div><span>Telefone</span>${e(a.tutor_phone)}</div><div><span>Veterinário</span>${e(a.veterinarian_name)}</div><div><span>Serviço</span>${e(a.service_name)}</div><div><span>Valor</span>${money(a.fee_cents)}</div><div><span>Saldo</span>${money(a.balance_cents)}</div></div>${a.notes ? `<p>${e(a.notes)}</p>` : ""}<p class="form-error" role="alert"></p></div>`,
     `<div class="modal-actions actions-wrap">${controls}</div>`,
   );
 }
@@ -273,7 +278,9 @@ document.addEventListener("submit", async (event) => {
     errorBox = form.querySelector(".form-error");
   submit.disabled = true;
   errorBox.textContent = "";
-  const body = Object.fromEntries(new FormData(form));
+  const formData = new FormData(form);
+  const body = Object.fromEntries(formData);
+  if (form.querySelector("[name=tutor_ids]")) body.tutor_ids = formData.getAll("tutor_ids");
   try {
     await request(form.dataset.endpoint, form.dataset.method, body);
     modal.close();
