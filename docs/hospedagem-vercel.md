@@ -36,7 +36,7 @@ Para backup online, baixe o objeto SQLite pelo painel Manage Blobs com a conta a
 
 ## Verificação
 
-A suíte contém 22 testes das regras e seis testes da persistência remota simulada. Ela cobre leitura sem gravação, persistência entre instâncias, conflito sem sobrescrita, erro de armazenamento sem falso sucesso e CSRF. A implantação real é verificada após o build.
+A suíte contém 40 testes, incluindo regras, vínculos N:N, migração e persistência remota simulada. Ela cobre leitura sem gravação, persistência entre instâncias, conflito sem sobrescrita, erro de armazenamento sem falso sucesso e CSRF. A implantação real é verificada após o build.
 
 ## Fontes
 
@@ -44,3 +44,7 @@ A suíte contém 22 testes das regras e seis testes da persistência remota simu
 - https://vercel.com/docs/vercel-blob/using-blob-sdk
 - https://vercel.com/changelog/vercel-blob-now-supports-consistent-reads-on-private-storage
 - https://github.com/vercel/storage/tree/main/packages/blob
+
+## Migração para tutores compartilhados
+
+O banco de versão 1 é copiado para um backup privado antes da migração. O nome do backup inclui o hash da imagem anterior e a criação não permite sobrescrita. O migrador resolve os vínculos antigos em pet_tutors, preserva o histórico e deixa accompanying_tutor_id sem valor nas consultas legadas. A versão migrada é salva com o ETag original. Um conflito impede anunciar a migração como concluída.

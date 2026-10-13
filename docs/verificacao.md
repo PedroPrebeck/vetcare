@@ -36,3 +36,11 @@ A captura da visão geral foi feita antes dos cadastros de teste, usando apenas 
 ## Alcance da verificação
 
 Os comandos foram executados no Linux. Os comandos do README para Windows usam o executável do ambiente virtual sem ativação, mas não foram executados em uma instalação Windows nesta verificação. Não foram realizados testes de carga, avaliação clínica dos registros ou ensaio de operação em produção.
+
+## Revisão de 13 de outubro de 2026
+
+A suíte passou com 40 testes. A migração preservou os IDs, o prontuário, os pagamentos e o saldo de um banco de versão 1. Uma falha simulada desfez toda a migração. Na nuvem simulada, um conflito de ETag manteve a imagem original e o backup, e o acesso seguinte migrou sem reaplicar o seed.
+
+O fluxo de interface foi verificado em Chromium 153 a 1440 px: cadastrar um pet com dois tutores, agendar com um deles, confirmar outro no atendimento, concluir, receber parcialmente e consultar o histórico. O histórico exibiu o acompanhante efetivo. No viewport de 390 px, a seleção de dois tutores funcionou sem excesso de largura da página e sem erros JavaScript. A tentativa de redimensionar a mesma página travou a captura do navegador de QA, então a verificação mobile foi repetida em uma página criada diretamente nesse tamanho.
+
+O relatório e os dois diagramas foram renderizados para revisão visual. A pontuação da prosa foi revisada, mantendo os pontos e vírgulas exigidos pelos exemplos de código e pela política CSP.

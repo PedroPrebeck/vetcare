@@ -112,3 +112,11 @@ Essa hospedagem serve à apresentação acadêmica com poucos acessos. Cada grav
 Configurações locais: `VETCARE_DATABASE` altera o arquivo de banco, `VETCARE_SECRET` define a chave de sessão e `PORT` altera a porta. Na nuvem, a proteção CSRF usa um cookie `__Host-`, Secure, HttpOnly e SameSite=Strict, comparado ao cabeçalho enviado pela interface. Assim, ela não depende de uma chave aleatória diferente em cada função. Nunca comite segredos ou bancos com dados pessoais.
 
 Detalhes e fontes: [docs/hospedagem-vercel.md](docs/hospedagem-vercel.md).
+
+## Tutores compartilhados e migração
+
+O cadastro de um pet permite selecionar vários tutores. O agendamento exige o tutor acompanhante. No atendimento, esse tutor pode ser confirmado ou alterado antes de gravar o prontuário. A agenda e o histórico mostram quem acompanhou cada consulta.
+
+`pet_tutors` resolve a relação N:N com chave composta. Desvincular arquiva o vínculo, sem apagar referências anteriores. Uma consulta aberta impede desvincular seu acompanhante até que ela seja corrigida ou cancelada.
+
+Em um banco local existente, execute `python -m flask --app app init-db`. O comando cria um backup da versão anterior e aplica a migração. Na Vercel, a migração ocorre no primeiro acesso aos dados, com backup privado e gravação condicional. Consultas antigas não informavam acompanhante e continuam com “Acompanhante não registrado”. Não se inventa essa informação nem se recarrega o seed.

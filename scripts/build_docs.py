@@ -38,6 +38,7 @@ LINE = colors.HexColor("#dfe7ef")
 TABLES = [
     "tutors",
     "pets",
+    "pet_tutors",
     "veterinarians",
     "services",
     "appointments",
@@ -47,6 +48,7 @@ TABLES = [
 LABELS = dict(
     tutors="Tutores",
     pets="Animais",
+    pet_tutors="Vínculos de tutoria",
     veterinarians="Veterinários",
     services="Serviços",
     appointments="Consultas",
@@ -61,7 +63,7 @@ DESCRIPTIONS = {
     "address": "Endereço de exibição do tutor.",
     "active": "1: ativo, 0: arquivado.",
     "created_at": "Instante de criação em UTC, com sufixo Z.",
-    "tutor_id": "Tutor responsável pelo animal.",
+    "tutor_id": "Tutor participante do vínculo.",
     "species": "Cão, Gato, Ave ou Outro.",
     "breed": "Raça informada, sem catálogo auxiliar.",
     "sex": "Macho, Fêmea ou Não informado.",
@@ -72,7 +74,8 @@ DESCRIPTIONS = {
     "specialty": "Área de atuação informada.",
     "price_cents": "Preço atual do serviço em centavos, não negativo.",
     "duration_minutes": "Duração em minutos, de 10 a 240.",
-    "pet_id": "Animal da consulta.",
+    "pet_id": "Animal da consulta ou do vínculo.",
+    "accompanying_tutor_id": "Tutor acompanhante, NULL somente em registros legados.",
     "veterinarian_id": "Profissional da consulta.",
     "service_id": "Serviço da consulta.",
     "starts_at": "Início em YYYY-MM-DDTHH:MM, horário de São Paulo.",
@@ -142,11 +145,11 @@ def dictionary(db):
 
 def diagram(db, conceptual=False):
     """Mesma geometria para SVG editável e desenho vetorial no relatório."""
-    width, height = 960, 1080
+    width, height = 960, 1450
     drawing = Drawing(width, height)
     svg = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
-        '<rect width="960" height="1080" fill="white"/>',
+        '<rect width="960" height="1450" fill="white"/>',
     ]
 
     def rect(x, y, w, h, fill, border="#dfe7ef"):
@@ -213,13 +216,14 @@ def diagram(db, conceptual=False):
         "#53657c",
     )
     pos = {
-        "tutors": (30, 90),
-        "veterinarians": (350, 90),
-        "services": (670, 90),
-        "pets": (30, 380),
-        "appointments": (350, 380),
-        "medical_records": (180, 820),
-        "payments": (520, 820),
+        "pets": (30, 90),
+        "tutors": (670, 90),
+        "pet_tutors": (350, 410),
+        "veterinarians": (30, 720),
+        "appointments": (350, 720),
+        "services": (670, 720),
+        "medical_records": (180, 1160),
+        "payments": (520, 1160),
     }
     heights = {
         t: (
@@ -229,37 +233,36 @@ def diagram(db, conceptual=False):
         )
         for t in TABLES
     }
-    # Conexões são desenhadas antes das caixas, preservando os campos legíveis.
-    line([(170, 90 + heights["tutors"]), (170, 380)])
-    label(180, 90 + heights["tutors"] + 23, "1", 15)
-    label(180, 367, "0..N", 15)
-    line([(310, 480), (350, 480)])
-    label(319, 469, "1", 13)
-    label(314, 507, "0..N", 13)
-    line([(490, 90 + heights["veterinarians"]), (490, 380)])
-    label(502, 90 + heights["veterinarians"] + 23, "1", 15)
-    label(502, 365, "0..N", 15)
-    line(
-        [
-            (810, 90 + heights["services"]),
-            (810, 325),
-            (650, 325),
-            (650, 440),
-            (630, 440),
-        ]
-    )
-    label(822, 90 + heights["services"] + 23, "1", 15)
-    label(651, 429, "0..N", 15)
-    end = 380 + heights["appointments"]
-    line([(430, end), (430, 770), (320, 770), (320, 820)])
-    label(437, end + 24, "1", 15)
-    label(330, 807, "0..1", 15)
-    line([(550, end), (550, 750), (660, 750), (660, 820)])
-    label(558, end + 24, "1", 15)
-    label(670, 807, "0..N", 15)
+    # Relações passam pelos espaços entre as caixas.
+    line([(310, 145), (350, 145), (350, 440)])
+    label(316, 134, "1", 13)
+    label(360, 402, "1..N", 13)
+    line([(670, 145), (630, 145), (630, 440)])
+    label(648, 134, "1", 13)
+    label(600, 402, "0..N", 13)
+    line([(490, 410 + heights["pet_tutors"]), (490, 720)])
+    label(502, 410 + heights["pet_tutors"] + 23, "1", 13)
+    label(502, 705, "0..N", 13)
+    line([(170, 90 + heights["pets"]), (170, 655), (430, 655), (430, 720)])
+    label(182, 90 + heights["pets"] + 23, "1", 13)
+    label(435, 705, "0..N", 13)
+    line([(310, 775), (350, 775)])
+    label(317, 764, "1", 13)
+    label(311, 800, "0..N", 13)
+    line([(670, 775), (630, 775)])
+    label(650, 764, "1", 13)
+    label(636, 800, "0..N", 13)
+    end = 720 + heights["appointments"]
+    line([(430, end), (430, 1120), (320, 1120), (320, 1160)])
+    label(439, end + 20, "1", 13)
+    label(330, 1148, "0..1", 13)
+    line([(550, end), (550, 1120), (660, 1120), (660, 1160)])
+    label(558, end + 20, "1", 13)
+    label(670, 1148, "0..N", 13)
     concepts = {
         "tutors": "Responsável pelo animal",
         "pets": "Paciente da clínica",
+        "pet_tutors": "Tutor vinculado ao animal",
         "veterinarians": "Profissional do atendimento",
         "services": "Catálogo de procedimentos",
         "appointments": "Compromisso da agenda",
@@ -351,7 +354,7 @@ styles.add(
         name="CodeVet",
         fontName="Courier",
         fontSize=6.5,
-        leading=9,
+        leading=8.3,
         textColor=NAVY,
         spaceAfter=10,
     )
@@ -420,7 +423,7 @@ class Report(BaseDocTemplate):
             canvas.setFont("Helvetica", 8)
             canvas.setFillColor(MUTED)
             canvas.drawString(54, A4[1] - 30, "VetCare | Projeto de Banco de Dados")
-            canvas.drawString(54, 30, "Documentação técnica | versão 1.0")
+            canvas.drawString(54, 30, "Documentação técnica | versão 2.0")
             canvas.drawRightString(A4[0] - 54, 30, str(doc.page))
         canvas.restoreState()
 
@@ -565,7 +568,7 @@ def build():
             styles["SubVet"],
         ),
         Spacer(1, 125),
-        Paragraph("Versão 1.0<br/>Outubro de 2026", styles["BodyVet"]),
+        Paragraph("Versão 2.0<br/>Outubro de 2026", styles["BodyVet"]),
         PageBreak(),
         Paragraph("Sumário", styles["H1Vet"]),
     ]
@@ -598,7 +601,14 @@ def build():
             ]
         )
     for number, filename in enumerate(
-        ["01_schema.sql", "02_seed.sql", "03_queries.sql", "04_transactions.sql"], 1
+        [
+            "01_schema.sql",
+            "02_seed.sql",
+            "03_queries.sql",
+            "04_transactions.sql",
+            "05_migrate_tutors.sql",
+        ],
+        1,
     ):
         story.extend(
             [

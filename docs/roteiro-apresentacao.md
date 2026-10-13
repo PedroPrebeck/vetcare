@@ -4,9 +4,9 @@ A sequência abaixo demonstra as relações e as regras do banco usando a interf
 
 ## 1. Apresentar o problema e o modelo
 
-Explique que a consulta liga animal, veterinário e serviço. O animal pertence a um tutor. Prontuário e pagamento são registros dependentes da consulta.
+Explique que a consulta liga animal, veterinário e serviço. O animal pode ter vários tutores. A consulta identifica quem o acompanha. Prontuário e pagamento são registros dependentes da consulta.
 
-Abra o diagrama e identifique as sete entidades, as FKs e a relação opcional de um prontuário por consulta. Mostre que vários pagamentos podem atender uma única cobrança.
+Abra o diagrama e identifique as oito entidades, as FKs e a relação opcional de um prontuário por consulta. Mostre que vários pagamentos podem atender uma única cobrança.
 
 ## 2. Cadastrar tutor e animal
 
@@ -52,3 +52,5 @@ Execute 04_transactions.sql e explique o ROLLBACK. Os exemplos inserem e removem
 ## Antes da apresentação
 
 Verifique se o PDF abre, inicie o app, teste um cadastro e tenha uma cópia do banco. Repetir a apresentação em uma base já preenchida pode ocupar os horários usados nos exemplos. Use outro arquivo de banco para uma demonstração nova.
+
+Demonstre um pet com dois tutores. Agende com um deles e confirme outro no atendimento. Mostre que o histórico mantém o acompanhante de cada consulta. Explique por que registros migrados não recebem um acompanhante presumido.

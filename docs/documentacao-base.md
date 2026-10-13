@@ -33,7 +33,7 @@ A recepção cadastra os responsáveis e os animais e organiza a agenda. O veter
 | Código | Requisito funcional | Tela ou operação |
 | :--- | :--- | :--- |
 | RF01 | Cadastrar, editar, pesquisar, arquivar e reativar tutores | Tutores |
-| RF02 | Cadastrar animais vinculados a um tutor e consultar seu histórico | Pacientes |
+| RF02 | Cadastrar animais vinculados a um ou mais tutores e consultar seu histórico | Pacientes |
 | RF03 | Manter veterinários com CRMV único | Veterinários |
 | RF04 | Manter serviços, preço e duração | Serviços |
 | RF05 | Agendar, reagendar, confirmar e cancelar consultas abertas | Agenda |
@@ -59,7 +59,9 @@ A recepção cadastra os responsáveis e os animais e organiza a agenda. O veter
 
 | Código | Regra | Onde é aplicada |
 | :--- | :--- | :--- |
-| RN01 | Cada animal pertence a exatamente um tutor | pets.tutor_id NOT NULL e FK |
+| RN01 | Cada animal tem pelo menos um tutor ativo no cadastro da interface | pet_tutors com PK composta, FKs e validação da API |
+| RN14 | Nova consulta exige um tutor acompanhante vinculado ao pet | FK composta e triggers |
+| RN15 | Desvincular um tutor preserva consultas antigas e exige resolver consultas abertas desse acompanhante | Vínculo arquivado e validação da API |
 | RN02 | Uma consulta referencia um animal, um veterinário e um serviço | FKs obrigatórias de appointments |
 | RN03 | CRMV e nome de serviço são únicos | UNIQUE |
 | RN04 | Consultas não canceladas do mesmo profissional ou animal não se sobrepõem | Triggers de INSERT e UPDATE |
@@ -71,7 +73,7 @@ A recepção cadastra os responsáveis e os animais e organiza a agenda. O veter
 | RN10 | Preço e duração da consulta conservam o valor contratado | Snapshots em appointments |
 | RN11 | Prontuários e pagamentos não podem ser editados ou removidos | Triggers de imutabilidade |
 | RN12 | Cadastro arquivado não entra em novo agendamento | Validação da API |
-| RN13 | Não se arquiva cadastro com consultas abertas, tutor exige animais arquivados | Validação da API |
+| RN13 | Não se arquiva cadastro com consultas abertas, tutor não pode ter vínculos ativos com animais ativos | Validação da API |
 | RN14 | Animal com histórico não troca de tutor nesta versão | Validação da API |
 | RN15 | Nascimento e pagamento não podem ter data futura | Validação da API |
 | RN16 | A aplicação não conclui consultas de uma data futura | Validação da API |
@@ -82,13 +84,14 @@ O preço zero é permitido para retornos gratuitos. O campo em aberto do painel 
 
 ## 6. Modelo conceitual
 
-As entidades do domínio são Tutor, Animal, Veterinário, Serviço, Consulta, Prontuário e Pagamento. Tutor identifica o responsável pelo animal. Consulta representa o compromisso da agenda e liga as entidades do atendimento. Prontuário e Pagamento registram resultados distintos dessa consulta.
+As entidades do domínio são Tutor, Animal, Vínculo de Tutoria, Veterinário, Serviço, Consulta, Prontuário e Pagamento. Tutor identifica o responsável pelo animal. Consulta representa o compromisso da agenda e liga as entidades do atendimento. Prontuário e Pagamento registram resultados distintos dessa consulta.
 
 ![Modelo conceitual](modelo-conceitual.svg)
 
 | Relação | Cardinalidade | Interpretação |
 | :--- | :--- | :--- |
-| Tutor possui Animal | Tutor 1 : Animal 0..N | Tutor pode não ter animais, cada animal exige um tutor |
+| Tutor cuida de Animal | N:N, resolvida por Vínculo | Um animal pode ter vários tutores e um tutor pode cuidar de vários animais |
+| Vínculo identifica acompanhante de Consulta | Vínculo 1 : Consulta 0..N | A consulta registra um tutor vinculado ao pet, registros anteriores podem não informar acompanhante |
 | Animal participa de Consulta | Animal 1 : Consulta 0..N | Cada consulta atende um animal |
 | Veterinário realiza Consulta | Veterinário 1 : Consulta 0..N | Cada consulta tem um profissional |
 | Serviço compõe Consulta | Serviço 1 : Consulta 0..N | Uma consulta usa um serviço neste escopo |
@@ -104,20 +107,23 @@ O modelo lógico usa tabelas com identificadores inteiros. Os nomes de tabelas e
 ![Diagrama lógico](modelagem.svg)
 
 - tutors(id PK, name, phone, email, address, active, created_at)
-- pets(id PK, tutor_id FK, name, species, breed, sex, birth_date, weight_kg, notes, active, created_at)
+- pets(id PK, name, species, breed, sex, birth_date, weight_kg, notes, active, created_at)
+- pet_tutors(pet_id PK/FK, tutor_id PK/FK, active, created_at)
 - veterinarians(id PK, name, crmv UNIQUE, specialty, phone, active)
 - services(id PK, name UNIQUE, price_cents, duration_minutes, active)
-- appointments(id PK, pet_id FK, veterinarian_id FK, service_id FK, starts_at, duration_minutes, fee_cents, status, notes, created_at)
+- appointments(id PK, pet_id FK, accompanying_tutor_id, veterinarian_id FK, service_id FK, starts_at, duration_minutes, fee_cents, status, notes, created_at)
 - medical_records(id PK, appointment_id FK UNIQUE, complaint, diagnosis, treatment, weight_kg, created_at)
 - payments(id PK, appointment_id FK, amount_cents, method, paid_at, created_at)
 
 As FKs usam ON DELETE RESTRICT. A interface arquiva tutores, animais, veterinários e serviços por meio de active=0. Isso preserva vínculos e evita excluir dados usados em consultas anteriores.
 
+A PK composta de pet_tutors impede vínculos duplicados. A FK composta appointments(pet_id, accompanying_tutor_id) referencia esse vínculo. accompanying_tutor_id aceita NULL para preservar consultas legadas sem inventar quem esteve presente. A API e um trigger exigem esse campo nos novos INSERTs. Na conclusão, o acompanhante pode ser confirmado ou alterado antes de criar o prontuário.
+
 ## 8. Normalização e decisões de modelagem
 
 Na primeira forma normal, cada coluna guarda um valor do seu domínio. Pagamentos e prontuários são linhas próprias, não há uma lista de consultas ou recebimentos dentro de uma coluna. Endereço é um texto de exibição, sem necessidade de consultas por logradouro neste escopo.
 
-As tabelas usam chaves simples. Assim, não há dependências parciais de uma chave composta, atendendo à segunda forma normal. CRMV é uma chave candidata de veterinarians e name é uma chave candidata de services, ambos com UNIQUE.
+As entidades usam chaves simples. A tabela pet_tutors usa a chave composta (pet_id, tutor_id). Seus atributos active e created_at descrevem o vínculo completo, sem depender de apenas uma parte da chave. Isso atende à segunda forma normal. CRMV é uma chave candidata de veterinarians e name é uma chave candidata de services, ambos com UNIQUE.
 
 Na terceira forma normal, nomes do tutor, do veterinário e do serviço não são copiados para appointments. Eles são obtidos por JOIN. O prontuário referencia a consulta, que já informa animal e profissional. Pagamento referencia a consulta, que informa a cobrança.
 
@@ -129,7 +135,7 @@ O total recebido e o saldo são calculados pela view appointment_balances. A vie
 
 ## 9. Modelo físico e dicionário de dados
 
-O script 01_schema.sql cria sete tabelas STRICT, sete índices explícitos, dez triggers e uma view. Também existem índices internos associados a UNIQUE. Tabelas STRICT exigem SQLite 3.37 ou superior [1]. INTEGER armazena IDs, flags e centavos, TEXT armazena textos e datas, REAL armazena peso.
+O script 01_schema.sql cria oito tabelas STRICT, sete índices explícitos, doze triggers e uma view. Também existem índices internos associados a UNIQUE. Tabelas STRICT exigem SQLite 3.37 ou superior [1]. INTEGER armazena IDs, flags e centavos, TEXT armazena textos e datas, REAL armazena peso.
 
 A seção seguinte é gerada a partir do esquema real com PRAGMA table_info e PRAGMA foreign_key_list. As expressões CHECK e os detalhes dos triggers estão no script completo do apêndice.
 
@@ -244,6 +250,12 @@ backup-db cria uma cópia consistente pela API SQLite e recusa sobrescrever um d
 
 Localmente, o servidor escuta em 127.0.0.1 e persiste o arquivo SQLite no computador. Na Vercel, o esquema permanece SQLite, mas cada requisição abre uma imagem em memória, obtida de um Blob privado. Leituras sem cache e gravações condicionais por ETag evitam leituras antigas e sobrescritas concorrentes [7]. O armazenamento usa OIDC e arquivos separados para Production e Preview. O limite da imagem é 4 MiB. Essa configuração atende à demonstração acadêmica, com transferência integral do banco por gravação. Não foi feito teste de carga para uma clínica em produção. Consulte docs/hospedagem-vercel.md para o fluxo e os limites.
 
+### 14.1. Migração dos tutores compartilhados
+
+Execute init-db no banco local existente. O comando cria um backup .v1-backup.sqlite3 antes de migrar a versão 1 para a versão 2. A migração copia cada antigo pets.tutor_id para pet_tutors, remove a coluna redundante e preserva IDs, agenda, prontuários, recebimentos e datas. Consultas legadas exibem Acompanhante não registrado até que uma consulta aberta seja corrigida ou atendida com seleção explícita. Registros concluídos não são reescritos.
+
+Na Vercel, a primeira leitura do banco antigo cria um backup privado identificado pelo hash da imagem e aplica a migração em memória. A imagem migrada é persistida por ETag. Se outra gravação vencer, a tentativa retorna conflito e deve ser repetida a partir da versão atual. O seed não é reaplicado. O script 05_migrate_tutors.sql é chamado pelo migrador, que desabilita FKs antes do BEGIN, verifica foreign_key_check antes do COMMIT e reativa FKs. Uma falha desfaz toda a migração.
+
 ## 15. Verificação e limites
 
 A suíte de integração cobre o cadastro ao pagamento parcial, conflito por veterinário, conflito por animal, horários adjacentes, reagendamento, liberação de horário após cancelamento, cobrança acima do saldo, preservação do preço antigo e proteção do histórico. Também verifica CSRF, JSON inválido, unicidade de CRMV, precisão monetária, datas inexistentes e inicialização sem perda dos dados.
@@ -252,7 +264,7 @@ Os testes usam bancos temporários separados do arquivo da demonstração. As ve
 
 O sistema carrega as listagens completas em /api/bootstrap. Paginação, filtros no servidor e revisão do plano de execução seriam necessários antes de trabalhar com grande volume. A busca atual é textual e não aplica um vocabulário clínico.
 
-Não há login, auditoria por autor, prontuário assinado, envio de lembretes, emissão fiscal, controle de vacinas ou estoque. O cadastro guarda o tutor atual do animal, transferências de responsabilidade exigiriam um histórico próprio. A consulta inclui um serviço. Estornos e correções clínicas também exigiriam novas entidades e regras.
+Não há login, auditoria por autor, prontuário assinado, envio de lembretes, emissão fiscal, controle de vacinas ou estoque. Os vínculos de tutoria podem ser arquivados ou reativados. Cada consulta guarda seu acompanhante, mesmo após o vínculo ser arquivado. Não há auditoria de todas as alterações cadastrais. A consulta inclui um serviço. Estornos e correções clínicas também exigiriam novas entidades e regras.
 
 Esses limites definem o que a versão demonstra e o que deve ser modelado antes de ampliar seu uso.
 
