@@ -28,9 +28,15 @@ class VetCareTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def post(self, path, data):
+        if path == "/appointments":
+            pet = next(p for p in self.read()["pets"] if p["id"] == data["pet_id"])
+            data.setdefault("accompanying_tutor_id", pet["tutor_ids"][0])
         return self.client.post("/api" + path, json=data, headers=self.headers)
 
     def patch(self, path, data):
+        if path.startswith("/appointments/") and "pet_id" in data:
+            pet = next(p for p in self.read()["pets"] if p["id"] == data["pet_id"])
+            data.setdefault("accompanying_tutor_id", pet["tutor_ids"][0])
         return self.client.patch("/api" + path, json=data, headers=self.headers)
 
     def read(self):
@@ -74,7 +80,7 @@ class VetCareTest(unittest.TestCase):
         p = self.post(
             "/pets",
             dict(
-                tutor_id=t,
+                tutor_ids=[t],
                 name="Animal teste",
                 species="Cão",
                 breed="",
@@ -249,9 +255,7 @@ class VetCareTest(unittest.TestCase):
         with sqlite3.connect(self.path) as db:
             db.execute("PRAGMA foreign_keys=ON")
             with self.assertRaises(sqlite3.IntegrityError):
-                db.execute(
-                    "INSERT INTO pets(tutor_id,name,species) VALUES (999,'Teste','Cão')"
-                )
+                db.execute("INSERT INTO pet_tutors(pet_id,tutor_id) VALUES (1,999)")
 
     def test_archive_guard(self):
         self.assertEqual(self.patch("/tutors/1", dict(active=0)).status_code, 400)
@@ -292,7 +296,7 @@ class VetCareTest(unittest.TestCase):
         with sqlite3.connect(self.path) as db:
             with self.assertRaises(sqlite3.IntegrityError):
                 db.execute(
-                    "INSERT INTO pets(tutor_id,name,species,birth_date) VALUES (1,'Teste','Cão','2026-02-30')"
+                    "INSERT INTO pets(name,species,birth_date) VALUES ('Teste','Cão','2026-02-30')"
                 )
 
 

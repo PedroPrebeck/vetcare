@@ -19,8 +19,8 @@ from validation import (
 api = Blueprint("api", __name__, url_prefix="/api")
 MASTERS = {"tutors", "pets", "veterinarians", "services"}
 QUERY = """SELECT a.*,p.name AS pet_name,p.species,p.breed,t.name AS tutor_name,
- t.phone AS tutor_phone,v.name AS veterinarian_name,s.name AS service_name,r.id AS record_id
- FROM appointment_balances a JOIN pets p ON p.id=a.pet_id JOIN tutors t ON t.id=p.tutor_id
+ a.accompanying_tutor_id AS tutor_id,t.phone AS tutor_phone,v.name AS veterinarian_name,s.name AS service_name,r.id AS record_id
+ FROM appointment_balances a JOIN pets p ON p.id=a.pet_id LEFT JOIN tutors t ON t.id=a.accompanying_tutor_id
  JOIN veterinarians v ON v.id=a.veterinarian_id JOIN services s ON s.id=a.service_id
  LEFT JOIN medical_records r ON r.appointment_id=a.id"""
 
@@ -77,6 +77,54 @@ def database_error(error):
     )
 
 
+def pet_rows():
+    pets = rows("SELECT * FROM pets ORDER BY active DESC,name")
+    links = rows(
+        "SELECT pt.pet_id,t.id,t.name,t.active FROM pet_tutors pt JOIN tutors t ON t.id=pt.tutor_id WHERE pt.active=1 ORDER BY t.name"
+    )
+    for pet in pets:
+        linked = [t for t in links if t["pet_id"] == pet["id"]]
+        pet["tutor_ids"] = [t["id"] for t in linked]
+        pet["tutor_name"] = ", ".join(t["name"] for t in linked)
+    return pets
+
+
+def tutor_ids(data):
+    ids = data.get("tutor_ids")
+    if not isinstance(ids, list) or not ids:
+        raise ValidationError("Selecione pelo menos um tutor.")
+    result = [integer({"id": value}, "id", "Tutor") for value in ids]
+    if len(result) != len(set(result)):
+        raise ValidationError("Não repita um tutor no vínculo.")
+    for identifier in result:
+        exists("tutors", identifier, True)
+    return result
+
+
+def sync_tutors(db, pet_id, ids):
+    removed = [
+        r[0]
+        for r in db.execute(
+            "SELECT tutor_id FROM pet_tutors WHERE pet_id=? AND active=1", (pet_id,)
+        )
+        if r[0] not in ids
+    ]
+    for tutor in removed:
+        if db.execute(
+            "SELECT 1 FROM appointments WHERE pet_id=? AND accompanying_tutor_id=? AND status IN ('Agendado','Confirmado')",
+            (pet_id, tutor),
+        ).fetchone():
+            raise ValidationError(
+                "Este tutor acompanha uma consulta aberta. Altere ou cancele a consulta antes de desvincular."
+            )
+    db.execute("UPDATE pet_tutors SET active=0 WHERE pet_id=?", (pet_id,))
+    for tutor in ids:
+        db.execute(
+            "INSERT INTO pet_tutors(pet_id,tutor_id) VALUES (?,?) ON CONFLICT(pet_id,tutor_id) DO UPDATE SET active=1",
+            (pet_id, tutor),
+        )
+
+
 @api.get("/bootstrap")
 def bootstrap():
     current_day = today().isoformat()
@@ -99,15 +147,14 @@ def bootstrap():
     return jsonify(
         dashboard=dashboard,
         tutors=rows("SELECT * FROM tutors ORDER BY active DESC,name"),
-        pets=rows(
-            "SELECT p.*,t.name AS tutor_name FROM pets p JOIN tutors t ON t.id=p.tutor_id ORDER BY p.active DESC,p.name"
-        ),
+        pets=pet_rows(),
+        pet_tutors=rows("SELECT * FROM pet_tutors ORDER BY pet_id,tutor_id"),
         veterinarians=rows("SELECT * FROM veterinarians ORDER BY active DESC,name"),
         services=rows("SELECT * FROM services ORDER BY active DESC,name"),
         appointments=rows(QUERY + " ORDER BY a.starts_at,a.id"),
         payments=rows(
             """SELECT x.*,p.name AS pet_name,t.name AS tutor_name FROM payments x
-        JOIN appointments a ON a.id=x.appointment_id JOIN pets p ON p.id=a.pet_id JOIN tutors t ON t.id=p.tutor_id ORDER BY x.paid_at DESC,x.id DESC"""
+        JOIN appointments a ON a.id=x.appointment_id JOIN pets p ON p.id=a.pet_id LEFT JOIN tutors t ON t.id=a.accompanying_tutor_id ORDER BY x.paid_at DESC,x.id DESC"""
         ),
     )
 
@@ -126,13 +173,10 @@ def master_fields(table, data):
             address=text(data, "address", "Endereço", maximum=250),
         )
     if table == "pets":
-        tutor_id = integer(data, "tutor_id", "Tutor")
-        exists("tutors", tutor_id, True)
         birth = data.get("birth_date") or None
         if birth:
             day(birth, "Nascimento", False)
         return dict(
-            tutor_id=tutor_id,
             name=text(data, "name", "Nome", 1, 80),
             species=choice(data, "species", ["Cão", "Gato", "Ave", "Outro"], "Espécie"),
             breed=text(data, "breed", "Raça", maximum=80),
@@ -159,13 +203,17 @@ def master_fields(table, data):
 def create_master(table):
     if table not in MASTERS:
         return jsonify(error="Recurso não encontrado."), 404
-    fields = master_fields(table, payload())
+    data = payload()
+    fields = master_fields(table, data)
+    tutors = tutor_ids(data) if table == "pets" else None
     db = get_db()
     with db:
         cursor = db.execute(
             f"INSERT INTO {table} ({','.join(fields)}) VALUES ({','.join('?' for _ in fields)})",
             tuple(fields.values()),
         )
+        if table == "pets":
+            sync_tutors(db, cursor.lastrowid, tutors)
     return jsonify(id=cursor.lastrowid), 201
 
 
@@ -182,7 +230,8 @@ def edit_master(table, identifier):
             if (
                 table == "tutors"
                 and db.execute(
-                    "SELECT 1 FROM pets WHERE tutor_id=? AND active=1", (identifier,)
+                    "SELECT 1 FROM pet_tutors pt JOIN pets p ON p.id=pt.pet_id WHERE pt.tutor_id=? AND pt.active=1 AND p.active=1",
+                    (identifier,),
                 ).fetchone()
             ):
                 raise ValidationError(
@@ -202,37 +251,48 @@ def edit_master(table, identifier):
                         "Há consultas abertas vinculadas. Conclua ou cancele antes de arquivar."
                     )
         elif table == "pets":
-            exists("tutors", old["tutor_id"], True)
+            if not db.execute(
+                "SELECT 1 FROM pet_tutors pt JOIN tutors t ON t.id=pt.tutor_id WHERE pt.pet_id=? AND pt.active=1 AND t.active=1",
+                (identifier,),
+            ).fetchone():
+                raise ValidationError(
+                    "Reative ou vincule um tutor ativo antes de reativar o pet."
+                )
     else:
         fields = master_fields(table, data)
-        if (
-            table == "pets"
-            and fields["tutor_id"] != old["tutor_id"]
-            and db.execute(
-                "SELECT 1 FROM appointments WHERE pet_id=?", (identifier,)
-            ).fetchone()
-        ):
-            raise ValidationError(
-                "Animal com histórico não pode trocar de tutor neste projeto."
-            )
+        if table == "pets":
+            tutors = tutor_ids(data)
     with db:
         db.execute(
             f"UPDATE {table} SET {','.join(k+'=?' for k in fields)} WHERE id=?",
             (*fields.values(), identifier),
         )
+        if table == "pets" and set(data) != {"active"}:
+            sync_tutors(db, identifier, tutors)
     return jsonify(ok=True)
 
 
 def appointment_fields(data):
     pet_id = integer(data, "pet_id", "Paciente")
     pet = exists("pets", pet_id, True)
-    exists("tutors", pet["tutor_id"], True)
+    companion = integer(data, "accompanying_tutor_id", "Tutor acompanhante")
+    exists("tutors", companion, True)
+    if (
+        not get_db()
+        .execute(
+            "SELECT 1 FROM pet_tutors WHERE pet_id=? AND tutor_id=? AND active=1",
+            (pet_id, companion),
+        )
+        .fetchone()
+    ):
+        raise ValidationError("O acompanhante deve ser um tutor vinculado ao paciente.")
     vet = integer(data, "veterinarian_id", "Veterinário")
     exists("veterinarians", vet, True)
     service_id = integer(data, "service_id", "Serviço")
     service = exists("services", service_id, True)
     return dict(
         pet_id=pet_id,
+        accompanying_tutor_id=companion,
         veterinarian_id=vet,
         service_id=service_id,
         starts_at=moment(data.get("starts_at")),
@@ -289,8 +349,8 @@ def patient_history(identifier):
             QUERY + " WHERE a.pet_id=? ORDER BY a.starts_at DESC", (identifier,)
         ),
         records=rows(
-            """SELECT r.*,a.starts_at,v.name AS veterinarian_name,s.name AS service_name FROM medical_records r
-        JOIN appointments a ON a.id=r.appointment_id JOIN veterinarians v ON v.id=a.veterinarian_id
+            """SELECT r.*,a.starts_at,t.name AS tutor_name,v.name AS veterinarian_name,s.name AS service_name FROM medical_records r
+        JOIN appointments a ON a.id=r.appointment_id LEFT JOIN tutors t ON t.id=a.accompanying_tutor_id JOIN veterinarians v ON v.id=a.veterinarian_id
         JOIN services s ON s.id=a.service_id WHERE a.pet_id=? ORDER BY a.starts_at DESC""",
             (identifier,),
         ),
@@ -305,6 +365,19 @@ def finish_appointment(identifier):
     if old["starts_at"][:10] > today().isoformat():
         raise ValidationError("Consulta futura não pode ser concluída.")
     data = payload()
+    companion = old["accompanying_tutor_id"]
+    if companion is None:
+        companion = integer(data, "accompanying_tutor_id", "Tutor acompanhante")
+        exists("tutors", companion, True)
+        if (
+            not get_db()
+            .execute(
+                "SELECT 1 FROM pet_tutors WHERE pet_id=? AND tutor_id=? AND active=1",
+                (old["pet_id"], companion),
+            )
+            .fetchone()
+        ):
+            raise ValidationError("Selecione um tutor vinculado ao paciente.")
     fields = dict(
         appointment_id=identifier,
         complaint=text(data, "complaint", "Queixa", 2),
@@ -317,8 +390,8 @@ def finish_appointment(identifier):
     with db:
         db.execute("BEGIN IMMEDIATE")
         cursor = db.execute(
-            "UPDATE appointments SET status='Concluído' WHERE id=? AND status IN ('Agendado','Confirmado')",
-            (identifier,),
+            "UPDATE appointments SET status='Concluído', accompanying_tutor_id=? WHERE id=? AND status IN ('Agendado','Confirmado')",
+            (companion, identifier),
         )
         if cursor.rowcount != 1:
             raise ValidationError("Consulta já foi alterada. Recarregue a página.")
