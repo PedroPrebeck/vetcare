@@ -366,7 +366,7 @@ def finish_appointment(identifier):
         raise ValidationError("Consulta futura não pode ser concluída.")
     data = payload()
     companion = old["accompanying_tutor_id"]
-    if companion is None:
+    if "accompanying_tutor_id" in data or companion is None:
         companion = integer(data, "accompanying_tutor_id", "Tutor acompanhante")
         exists("tutors", companion, True)
         if (
