@@ -123,3 +123,18 @@ class TutorTest(unittest.TestCase):
                 ],
                 2,
             )
+
+    def test_can_confirm_other_tutor_at_attendance(self):
+        response = self.appointment(1)
+        identifier = response.get_json()["id"]
+        response = self.call(
+            f"/appointments/{identifier}/record",
+            {
+                "complaint": "Rotina",
+                "diagnosis": "Demonstração",
+                "accompanying_tutor_id": 2,
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        history = self.client.get("/api/pets/1/history").get_json()
+        self.assertEqual(history["records"][0]["tutor_name"], "Rafael Santos")

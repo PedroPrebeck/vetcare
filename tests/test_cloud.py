@@ -12,6 +12,10 @@ class FakeBlob:
         self.version = 0
         self.conflict = False
         self.unavailable = False
+        self.backups = []
+
+    def backup(self, data):
+        self.backups.append(data)
 
     def load(self):
         return (self.data, str(self.version)) if self.data else None
@@ -109,3 +113,25 @@ class CloudTest(unittest.TestCase):
             base_url="https://vetcare.example",
         )
         self.assertEqual(response.status_code, 403)
+
+    def test_migrates_stored_version_with_backup_and_conditional_save(self):
+        import sqlite3
+        from db import ROOT
+
+        db = sqlite3.connect(":memory:")
+        db.executescript((ROOT / "tests/fixtures/schema_v1.sql").read_text())
+        db.executescript(
+            "INSERT INTO tutors(id,name,phone) VALUES(1,'Tutor legado','71999999999'); INSERT INTO pets(id,tutor_id,name,species) VALUES(1,1,'Pet legado','Cão');"
+        )
+        old = db.serialize()
+        self.store.data = old
+        self.store.conflict = True
+        self.assertEqual(self.read().status_code, 409)
+        self.assertEqual(self.store.data, old)
+        self.assertEqual(self.store.backups[0], old)
+        self.store.conflict = False
+        self.assertEqual(self.read().status_code, 200)
+        db.deserialize(self.store.data)
+        self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0], 2)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM pet_tutors").fetchone()[0], 1)
+        self.assertEqual(len(self.read().get_json()["pets"]), 1)
