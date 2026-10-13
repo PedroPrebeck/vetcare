@@ -12,7 +12,7 @@ O backend Flask mantém o SQLite. `cloud_db.py` adapta a persistência ao ambien
 6. Um conflito retorna HTTP 409. A alteração daquela requisição é descartada com a conexão em memória. O usuário deve recarregar e repetir a operação.
 7. Erros de armazenamento retornam HTTP 503. Nenhuma gravação é anunciada como confirmada antes do retorno do Blob.
 
-A primeira leitura cria o esquema e o seed se o objeto não existir. A criação proíbe sobrescrita; se outro acesso criou o banco, a função lê o objeto vencedor. Consultas de leitura não gravam novamente a imagem.
+A primeira leitura cria o esquema e o seed se o objeto não existir. A criação proíbe sobrescrita, se outro acesso criou o banco, a função lê o objeto vencedor. Consultas de leitura não gravam novamente a imagem.
 
 ## Configuração
 

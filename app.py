@@ -38,7 +38,7 @@ def create_app(config=None):
 
     @app.before_request
     def protect_writes():
-        # Token por sessão; endpoints mutáveis exigem o cabeçalho da própria interface.
+        # Token por sessão, endpoints mutáveis exigem o cabeçalho da própria interface.
         if request.path.startswith("/api/") and request.method in (
             "POST",
             "PATCH",
@@ -131,7 +131,7 @@ def create_app(config=None):
         import sqlite3
 
         if Path(destination).exists():
-            raise click.ClickException("Destino já existe; escolha outro arquivo.")
+            raise click.ClickException("Destino já existe, escolha outro arquivo.")
         with sqlite3.connect(app.config["DATABASE"]) as source, sqlite3.connect(
             destination
         ) as target:

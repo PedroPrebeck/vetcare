@@ -28,7 +28,7 @@ def close_db(_error=None):
 
 
 def initialize(path, demo=False):
-    """Cria esquema idempotente; seed somente quando todas as tabelas estão vazias."""
+    """Cria esquema idempotente, seed somente quando todas as tabelas estão vazias."""
     if sqlite3.sqlite_version_info < (3, 37, 0):
         raise ValueError("SQLite 3.37+ é necessário para tabelas STRICT.")
     Path(path).parent.mkdir(parents=True, exist_ok=True)

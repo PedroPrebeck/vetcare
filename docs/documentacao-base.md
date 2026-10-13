@@ -4,7 +4,7 @@ Documentação técnica para projeto de Banco de Dados. Versão 1.0, outubro de 
 
 ## 1. Introdução
 
-Uma clínica veterinária precisa relacionar o animal atendido ao seu responsável, ao profissional que realiza a consulta e ao serviço prestado. Agenda, prontuário e recebimento pertencem ao mesmo processo, mas registram fatos diferentes. O horário de uma consulta pode mudar antes do atendimento; o prontuário descreve o que foi observado; o pagamento informa quanto foi recebido e quando.
+Uma clínica veterinária precisa relacionar o animal atendido ao seu responsável, ao profissional que realiza a consulta e ao serviço prestado. Agenda, prontuário e recebimento pertencem ao mesmo processo, mas registram fatos diferentes. O horário de uma consulta pode mudar antes do atendimento, o prontuário descreve o que foi observado, o pagamento informa quanto foi recebido e quando.
 
 O VetCare organiza esse processo em uma aplicação web com execução local e demonstração online. O projeto usa SQLite para apresentar a passagem do modelo de dados ao banco físico, com restrições, consultas e transações que podem ser examinadas diretamente. A interface permite executar as operações sem exigir comandos SQL do usuário da clínica.
 
@@ -28,7 +28,7 @@ Desenvolver e documentar um sistema de clínica veterinária que mantenha os cad
 
 ## 4. Escopo e requisitos
 
-A recepção cadastra os responsáveis e os animais e organiza a agenda. O veterinário registra o atendimento. O financeiro registra recebimentos. Esses papéis descrevem o uso do sistema; a versão local não contém autenticação nem restrições por perfil.
+A recepção cadastra os responsáveis e os animais e organiza a agenda. O veterinário registra o atendimento. O financeiro registra recebimentos. Esses papéis descrevem o uso do sistema, a versão local não contém autenticação nem restrições por perfil.
 
 | Código | Requisito funcional | Tela ou operação |
 | :--- | :--- | :--- |
@@ -71,12 +71,12 @@ A recepção cadastra os responsáveis e os animais e organiza a agenda. O veter
 | RN10 | Preço e duração da consulta conservam o valor contratado | Snapshots em appointments |
 | RN11 | Prontuários e pagamentos não podem ser editados ou removidos | Triggers de imutabilidade |
 | RN12 | Cadastro arquivado não entra em novo agendamento | Validação da API |
-| RN13 | Não se arquiva cadastro com consultas abertas; tutor exige animais arquivados | Validação da API |
+| RN13 | Não se arquiva cadastro com consultas abertas, tutor exige animais arquivados | Validação da API |
 | RN14 | Animal com histórico não troca de tutor nesta versão | Validação da API |
 | RN15 | Nascimento e pagamento não podem ter data futura | Validação da API |
 | RN16 | A aplicação não conclui consultas de uma data futura | Validação da API |
 
-As regras de domínio fixas ficam no banco sempre que o SQLite permite expressá-las de modo direto. Regras de fluxo e de calendário ficam na API. Executar SQL manualmente pode contornar as regras exclusivas da API; os scripts didáticos devem ser executados em um banco de demonstração.
+As regras de domínio fixas ficam no banco sempre que o SQLite permite expressá-las de modo direto. Regras de fluxo e de calendário ficam na API. Executar SQL manualmente pode contornar as regras exclusivas da API, os scripts didáticos devem ser executados em um banco de demonstração.
 
 O preço zero é permitido para retornos gratuitos. O campo em aberto do painel soma apenas saldos de consultas concluídas. A tela financeira também mostra consultas agendadas com saldo, pois o sistema permite adiantamentos.
 
@@ -88,7 +88,7 @@ As entidades do domínio são Tutor, Animal, Veterinário, Serviço, Consulta, P
 
 | Relação | Cardinalidade | Interpretação |
 | :--- | :--- | :--- |
-| Tutor possui Animal | Tutor 1 : Animal 0..N | Tutor pode não ter animais; cada animal exige um tutor |
+| Tutor possui Animal | Tutor 1 : Animal 0..N | Tutor pode não ter animais, cada animal exige um tutor |
 | Animal participa de Consulta | Animal 1 : Consulta 0..N | Cada consulta atende um animal |
 | Veterinário realiza Consulta | Veterinário 1 : Consulta 0..N | Cada consulta tem um profissional |
 | Serviço compõe Consulta | Serviço 1 : Consulta 0..N | Uma consulta usa um serviço neste escopo |
@@ -115,7 +115,7 @@ As FKs usam ON DELETE RESTRICT. A interface arquiva tutores, animais, veterinár
 
 ## 8. Normalização e decisões de modelagem
 
-Na primeira forma normal, cada coluna guarda um valor do seu domínio. Pagamentos e prontuários são linhas próprias; não há uma lista de consultas ou recebimentos dentro de uma coluna. Endereço é um texto de exibição, sem necessidade de consultas por logradouro neste escopo.
+Na primeira forma normal, cada coluna guarda um valor do seu domínio. Pagamentos e prontuários são linhas próprias, não há uma lista de consultas ou recebimentos dentro de uma coluna. Endereço é um texto de exibição, sem necessidade de consultas por logradouro neste escopo.
 
 As tabelas usam chaves simples. Assim, não há dependências parciais de uma chave composta, atendendo à segunda forma normal. CRMV é uma chave candidata de veterinarians e name é uma chave candidata de services, ambos com UNIQUE.
 
@@ -123,13 +123,13 @@ Na terceira forma normal, nomes do tutor, do veterinário e do serviço não sã
 
 fee_cents e duration_minutes de appointments representam condições da consulta no momento do agendamento. Não são cópias que precisam permanecer iguais ao catálogo: mudar o preço de services não muda o preço já acordado. Essa decisão preserva a interpretação histórica dos dados.
 
-weight_kg em pets informa o peso mais recente registrado pela interface. weight_kg em medical_records registra a medição daquele atendimento. A transação de conclusão atualiza ambos quando um peso é informado. Os campos têm significados temporais distintos; o peso histórico não é substituído quando o cadastro muda.
+weight_kg em pets informa o peso mais recente registrado pela interface. weight_kg em medical_records registra a medição daquele atendimento. A transação de conclusão atualiza ambos quando um peso é informado. Os campos têm significados temporais distintos, o peso histórico não é substituído quando o cadastro muda.
 
 O total recebido e o saldo são calculados pela view appointment_balances. A view agrega pagamentos antes de juntá-los à consulta, produzindo uma linha por consulta. Isso evita somar o preço da consulta várias vezes quando existem pagamentos parciais.
 
 ## 9. Modelo físico e dicionário de dados
 
-O script 01_schema.sql cria sete tabelas STRICT, sete índices explícitos, dez triggers e uma view. Também existem índices internos associados a UNIQUE. Tabelas STRICT exigem SQLite 3.37 ou superior [1]. INTEGER armazena IDs, flags e centavos; TEXT armazena textos e datas; REAL armazena peso.
+O script 01_schema.sql cria sete tabelas STRICT, sete índices explícitos, dez triggers e uma view. Também existem índices internos associados a UNIQUE. Tabelas STRICT exigem SQLite 3.37 ou superior [1]. INTEGER armazena IDs, flags e centavos, TEXT armazena textos e datas, REAL armazena peso.
 
 A seção seguinte é gerada a partir do esquema real com PRAGMA table_info e PRAGMA foreign_key_list. As expressões CHECK e os detalhes dos triggers estão no script completo do apêndice.
 
@@ -145,7 +145,7 @@ O SQLite exige que a aplicação ative a verificação de chaves estrangeiras em
 
 ### 10.2. Tipos, valores e datas
 
-Os valores monetários usam inteiros em centavos. R$ 180,00 é armazenado como 18000. A entrada passa por Decimal antes de ser convertida; valores com mais de duas casas decimais são rejeitados. Isso evita operações de saldo com aproximações binárias de ponto flutuante.
+Os valores monetários usam inteiros em centavos. R$ 180,00 é armazenado como 18000. A entrada passa por Decimal antes de ser convertida, valores com mais de duas casas decimais são rejeitados. Isso evita operações de saldo com aproximações binárias de ponto flutuante.
 
 A agenda usa texto no formato YYYY-MM-DDTHH:MM, interpretado como horário civil de America/Sao_Paulo. Nascimento e pagamento usam YYYY-MM-DD. created_at usa UTC com sufixo Z para registrar o instante de criação. Datas de calendário são validadas na API e por CHECK, usando a normalização do SQLite para rejeitar dias inexistentes.
 
@@ -169,7 +169,7 @@ Os quatro triggers de imutabilidade impedem UPDATE e DELETE em pagamentos e pron
 
 idx_pets_tutor apoia a busca de animais por responsável. Os índices de agenda combinam veterinário ou animal com horário, ajudando a limitar a busca de conflitos. idx_agenda_service apoia o vínculo com o catálogo, e idx_payments_appointment apoia a agregação de recebimentos. idx_agenda_date permite buscas por intervalo de data.
 
-Uma consulta que aplica substr diretamente em starts_at pode não aproveitar o índice por data para a busca. O exemplo Q8 mostra uma busca por intervalo e permite observar seu plano com EXPLAIN QUERY PLAN. Para uma base pequena de apresentação, algumas listagens usam substr por clareza; consultas de produção deveriam ser ajustadas ao volume medido.
+Uma consulta que aplica substr diretamente em starts_at pode não aproveitar o índice por data para a busca. O exemplo Q8 mostra uma busca por intervalo e permite observar seu plano com EXPLAIN QUERY PLAN. Para uma base pequena de apresentação, algumas listagens usam substr por clareza, consultas de produção deveriam ser ajustadas ao volume medido.
 
 appointment_balances é uma view, não uma tabela duplicada. Ela apresenta as colunas da consulta, o valor recebido e o saldo. COALESCE converte a ausência de pagamentos em zero.
 
@@ -179,7 +179,7 @@ appointment_balances é uma view, não uma tabela duplicada. Ela apresenta as co
 
 03_queries.sql contém oito exemplos: agenda do dia, quantidade de animais por tutor, receita por forma de pagamento, saldos, histórico clínico, volume de atendimentos, verificações de integridade e plano de consulta. Eles mostram JOIN, LEFT JOIN, GROUP BY, SUM, COUNT e COALESCE.
 
-04_transactions.sql demonstra INSERT, UPDATE e DELETE dentro de transações que terminam em ROLLBACK. O primeiro exemplo cria tutor e animal relacionados; o segundo altera o catálogo sem mudar consultas anteriores; o terceiro remove apenas registros temporários sem dependências restantes.
+04_transactions.sql demonstra INSERT, UPDATE e DELETE dentro de transações que terminam em ROLLBACK. O primeiro exemplo cria tutor e animal relacionados, o segundo altera o catálogo sem mudar consultas anteriores, o terceiro remove apenas registros temporários sem dependências restantes.
 
 ## 11. Arquitetura e organização do código
 
@@ -222,7 +222,7 @@ Validação de conteúdo devolve 400. Ausência de token de sessão devolve 403.
 
 A conclusão do atendimento usa BEGIN IMMEDIATE. O UPDATE exige um status aberto, e o INSERT exige uma consulta concluída. Se uma dessas operações falha, o contexto de transação executa rollback. O peso atual do animal é atualizado na mesma transação quando o prontuário informa uma medição.
 
-Os recebimentos são serializados pelo bloqueio de escrita do SQLite. O trigger verifica o saldo no momento do INSERT, impedindo que dois pagamentos sucessivos ultrapassem a cobrança. O banco foi escolhido para demonstração local com poucos usuários; não foi realizado ensaio de carga para uso simultâneo em produção.
+Os recebimentos são serializados pelo bloqueio de escrita do SQLite. O trigger verifica o saldo no momento do INSERT, impedindo que dois pagamentos sucessivos ultrapassem a cobrança. O banco foi escolhido para demonstração local com poucos usuários, não foi realizado ensaio de carga para uso simultâneo em produção.
 
 ## 13. Interface e uso
 
@@ -230,17 +230,17 @@ A visão geral exibe as consultas do dia, o número de pacientes ativos, os rece
 
 A consulta abre um resumo com responsável, telefone, serviço, horário, valor e saldo. A partir desse resumo, o usuário pode confirmar, cancelar, atender, receber ou abrir o histórico do animal. A interface informa que prontuários e recebimentos serão preservados após o registro.
 
-Os formulários usam rótulos, campos obrigatórios, limites numéricos e mensagens de erro. Os modais usam dialog nativo, com navegação por teclado e fechamento por Escape. Em telas pequenas, a navegação passa para uma faixa horizontal; tabelas mantêm suas colunas em uma área com rolagem, sem reduzir os textos a tamanhos ilegíveis.
+Os formulários usam rótulos, campos obrigatórios, limites numéricos e mensagens de erro. Os modais usam dialog nativo, com navegação por teclado e fechamento por Escape. Em telas pequenas, a navegação passa para uma faixa horizontal, tabelas mantêm suas colunas em uma área com rolagem, sem reduzir os textos a tamanhos ilegíveis.
 
 ## 14. Instalação e operação
 
-Requisitos: Python 3.11 ou superior, SQLite 3.37 ou superior e navegador com suporte a módulos JavaScript e dialog. Flask é a dependência do servidor; tzdata fornece a base de fusos em sistemas sem esses arquivos, como algumas instalações do Windows. ReportLab só é necessário para gerar o PDF novamente [4].
+Requisitos: Python 3.11 ou superior, SQLite 3.37 ou superior e navegador com suporte a módulos JavaScript e dialog. Flask é a dependência do servidor, tzdata fornece a base de fusos em sistemas sem esses arquivos, como algumas instalações do Windows. ReportLab só é necessário para gerar o PDF novamente [4].
 
 A sequência de instalação é criar um ambiente virtual, instalar requirements.txt, executar init-db e iniciar app.py. O README contém os comandos para Windows, Linux e macOS. init-db --demo carrega os dados fictícios, enquanto init-db cria apenas o esquema.
 
-O banco padrão fica em instance/vetcare.sqlite3. VETCARE_DATABASE permite escolher outro arquivo. VETCARE_SECRET define uma chave de sessão estável; sem essa variável, a chave é gerada no início e sessões anteriores deixam de valer após reiniciar o servidor. PORT altera a porta, cujo padrão é 5000.
+O banco padrão fica em instance/vetcare.sqlite3. VETCARE_DATABASE permite escolher outro arquivo. VETCARE_SECRET define uma chave de sessão estável, sem essa variável, a chave é gerada no início e sessões anteriores deixam de valer após reiniciar o servidor. PORT altera a porta, cujo padrão é 5000.
 
-backup-db cria uma cópia consistente pela API SQLite e recusa sobrescrever um destino existente. Copiar apenas o arquivo principal enquanto o servidor escreve pode perder dados ainda no WAL; por isso o projeto fornece um comando de backup [5]. Para restaurar, pare o servidor e configure o arquivo de backup como banco de execução.
+backup-db cria uma cópia consistente pela API SQLite e recusa sobrescrever um destino existente. Copiar apenas o arquivo principal enquanto o servidor escreve pode perder dados ainda no WAL, por isso o projeto fornece um comando de backup [5]. Para restaurar, pare o servidor e configure o arquivo de backup como banco de execução.
 
 Localmente, o servidor escuta em 127.0.0.1 e persiste o arquivo SQLite no computador. Na Vercel, o esquema permanece SQLite, mas cada requisição abre uma imagem em memória, obtida de um Blob privado. Leituras sem cache e gravações condicionais por ETag evitam leituras antigas e sobrescritas concorrentes [7]. O armazenamento usa OIDC e arquivos separados para Production e Preview. O limite da imagem é 4 MiB. Essa configuração atende à demonstração acadêmica, com transferência integral do banco por gravação. Não foi feito teste de carga para uma clínica em produção. Consulte docs/hospedagem-vercel.md para o fluxo e os limites.
 
@@ -252,7 +252,7 @@ Os testes usam bancos temporários separados do arquivo da demonstração. As ve
 
 O sistema carrega as listagens completas em /api/bootstrap. Paginação, filtros no servidor e revisão do plano de execução seriam necessários antes de trabalhar com grande volume. A busca atual é textual e não aplica um vocabulário clínico.
 
-Não há login, auditoria por autor, prontuário assinado, envio de lembretes, emissão fiscal, controle de vacinas ou estoque. O cadastro guarda o tutor atual do animal; transferências de responsabilidade exigiriam um histórico próprio. A consulta inclui um serviço. Estornos e correções clínicas também exigiriam novas entidades e regras.
+Não há login, auditoria por autor, prontuário assinado, envio de lembretes, emissão fiscal, controle de vacinas ou estoque. O cadastro guarda o tutor atual do animal, transferências de responsabilidade exigiriam um histórico próprio. A consulta inclui um serviço. Estornos e correções clínicas também exigiriam novas entidades e regras.
 
 Esses limites definem o que a versão demonstra e o que deve ser modelado antes de ampliar seu uso.
 

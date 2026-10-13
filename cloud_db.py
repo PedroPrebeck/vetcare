@@ -1,7 +1,7 @@
 """SQLite por requisição, persistido no Blob privado com controle por ETag.
 
 Protocolo do SDK oficial @vercel/blob 2.8.1. OIDC dispensa token permanente.
-Cada alteração envia uma imagem completa; adequado à demonstração acadêmica.
+Cada alteração envia uma imagem completa, adequado à demonstração acadêmica.
 """
 
 import json

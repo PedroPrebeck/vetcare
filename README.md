@@ -50,7 +50,7 @@ Para começar sem dados fictícios, use `init-db` sem `--demo`. A inicializaçã
 | [04_transactions.sql](database/04_transactions.sql) | INSERT, UPDATE, DELETE e transações com ROLLBACK |
 | [Roteiro de apresentação](docs/roteiro-apresentacao.md) | Sequência para demonstrar a interface e explicar o banco |
 
-Os nomes, contatos e registros clínicos do seed são fictícios. E-mails usam o domínio `example.com`; CRMVs contêm `DEMO`. As datas da agenda são relativas ao dia da execução em São Paulo.
+Os nomes, contatos e registros clínicos do seed são fictícios. E-mails usam o domínio `example.com`, CRMVs contêm `DEMO`. As datas da agenda são relativas ao dia da execução em São Paulo.
 
 ## Stack e organização
 
@@ -70,7 +70,7 @@ vetcare/
   instance/            Banco local, ignorado no Git
 ```
 
-Flask serve a página e a API na mesma origem. A interface usa módulos JavaScript nativos. Toda alteração é persistida no SQLite; recarregar a página não apaga os cadastros. O histórico clínico e os recebimentos não podem ser editados ou removidos nesta versão. Cadastros têm arquivamento e reativação.
+Flask serve a página e a API na mesma origem. A interface usa módulos JavaScript nativos. Toda alteração é persistida no SQLite, recarregar a página não apaga os cadastros. O histórico clínico e os recebimentos não podem ser editados ou removidos nesta versão. Cadastros têm arquivamento e reativação.
 
 ## Testes
 

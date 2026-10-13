@@ -59,7 +59,7 @@ DESCRIPTIONS = {
     "phone": "Telefone para contato, armazenado como texto.",
     "email": "E-mail opcional.",
     "address": "Endereço de exibição do tutor.",
-    "active": "1: ativo; 0: arquivado.",
+    "active": "1: ativo, 0: arquivado.",
     "created_at": "Instante de criação em UTC, com sufixo Z.",
     "tutor_id": "Tutor responsável pelo animal.",
     "species": "Cão, Gato, Ave ou Outro.",
@@ -68,7 +68,7 @@ DESCRIPTIONS = {
     "birth_date": "Nascimento opcional em YYYY-MM-DD.",
     "weight_kg": "Peso em kg, positivo quando informado.",
     "notes": "Observações opcionais do cadastro ou agendamento.",
-    "crmv": "Registro profissional com UF; único.",
+    "crmv": "Registro profissional com UF, único.",
     "specialty": "Área de atuação informada.",
     "price_cents": "Preço atual do serviço em centavos, não negativo.",
     "duration_minutes": "Duração em minutos, de 10 a 240.",
@@ -76,13 +76,13 @@ DESCRIPTIONS = {
     "veterinarian_id": "Profissional da consulta.",
     "service_id": "Serviço da consulta.",
     "starts_at": "Início em YYYY-MM-DDTHH:MM, horário de São Paulo.",
-    "fee_cents": "Preço acordado em centavos; preservado após alterar o catálogo.",
+    "fee_cents": "Preço acordado em centavos, preservado após alterar o catálogo.",
     "status": "Agendado, Confirmado, Concluído ou Cancelado.",
     "appointment_id": "Consulta vinculada ao registro.",
     "complaint": "Queixa ou motivo do atendimento.",
     "diagnosis": "Avaliação clínica ou diagnóstico registrado.",
     "treatment": "Conduta e orientações registradas.",
-    "amount_cents": "Valor recebido em centavos; deve ser positivo.",
+    "amount_cents": "Valor recebido em centavos, deve ser positivo.",
     "method": "Pix, Dinheiro ou Cartão.",
     "paid_at": "Dia do pagamento em YYYY-MM-DD.",
 }
@@ -130,11 +130,11 @@ def dictionary(db):
                 key.append("Padrão: " + default)
             description = DESCRIPTIONS[row["name"]]
             if table == "medical_records" and row["name"] == "weight_kg":
-                description = "Peso aferido neste atendimento; registro histórico."
+                description = "Peso aferido neste atendimento, registro histórico."
             if table == "pets" and row["name"] == "weight_kg":
-                description = "Peso atual do cadastro; atualizado pelo último registro da interface."
+                description = "Peso atual do cadastro, atualizado pelo último registro da interface."
             lines.append(
-                f"| {row['name']} | {row['type']} | {'Sim' if row['notnull'] or row['pk'] else 'Não'} | {'; '.join(key) or 'Sem padrão'} | {description} |"
+                f"| {row['name']} | {row['type']} | {'Sim' if row['notnull'] or row['pk'] else 'Não'} | {', '.join(key) or 'Sem padrão'} | {description} |"
             )
         sections.append("\n".join(lines))
     return "\n\n".join(sections)

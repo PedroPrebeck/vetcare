@@ -114,7 +114,7 @@ BEGIN
  WHERE NOT EXISTS(SELECT 1 FROM appointments a WHERE a.id=NEW.appointment_id AND a.status <> 'Cancelado'
  AND NEW.amount_cents + (SELECT COALESCE(SUM(amount_cents),0) FROM payments WHERE appointment_id=a.id) <= a.fee_cents);
 END;
--- Recebimentos e prontuários são append-only no escopo didático; estorno é evolução futura.
+-- Recebimentos e prontuários são append-only no escopo didático, estorno é evolução futura.
 CREATE TRIGGER IF NOT EXISTS payment_no_update BEFORE UPDATE ON payments
 BEGIN SELECT RAISE(ABORT,'Recebimentos não podem ser editados.'); END;
 CREATE TRIGGER IF NOT EXISTS payment_no_delete BEFORE DELETE ON payments
