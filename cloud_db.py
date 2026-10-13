@@ -8,10 +8,11 @@ import json
 import os
 import sqlite3
 import uuid
+import hashlib
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from flask import current_app, g, request
-from db import ROOT
+from db import ROOT, migrate
 
 MAX_DATABASE_BYTES = 4 * 1024 * 1024
 
@@ -56,7 +57,7 @@ class BlobStore:
         except (URLError, TimeoutError) as error:
             raise StorageUnavailable("Armazenamento indisponível.") from error
 
-    def save(self, data, etag=None):
+    def save(self, data, etag=None, pathname=None):
         if len(data) > MAX_DATABASE_BYTES:
             raise StorageUnavailable("Banco excede o limite da demonstração.")
         headers = {
@@ -73,7 +74,7 @@ class BlobStore:
         if etag:
             headers["x-if-match"] = etag
         req = Request(
-            "https://vercel.com/api/blob/?pathname=" + self.pathname,
+            "https://vercel.com/api/blob/?pathname=" + (pathname or self.pathname),
             data=data,
             headers=headers,
             method="PUT",
@@ -97,6 +98,15 @@ class BlobStore:
             raise StorageUnavailable("Falha na gravação do armazenamento.") from error
         except (URLError, TimeoutError, ValueError) as error:
             raise StorageUnavailable("Gravação não confirmada.") from error
+
+    def backup(self, data):
+        digest = hashlib.sha256(data).hexdigest()
+        path = self.pathname + ".v1-backup-" + digest + ".sqlite3"
+        try:
+            self.save(data, pathname=path)
+        except StorageConflict:
+            # Mesmo nome implica mesmos bytes, o backup já foi preservado.
+            pass
 
 
 def open_cloud_database():
@@ -122,10 +132,17 @@ def open_cloud_database():
         else:
             conn.deserialize(stored[0])
             etag = stored[1]
+        baseline = conn.total_changes
+        if conn.execute("PRAGMA user_version").fetchone()[0] == 1:
+            store.backup(stored[0])
+        try:
+            migrate(conn)
+        except (ValueError, sqlite3.DatabaseError) as error:
+            raise StorageUnavailable("Migração não confirmada.") from error
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         g.blob_store, g.blob_etag = store, etag
-        g.db_baseline = conn.total_changes
+        g.db_baseline = baseline
         return conn
     except Exception:
         conn.close()

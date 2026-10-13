@@ -1,4 +1,4 @@
--- VetCare | SQLite 3.37+ | criação não destrutiva, esquema versão 1.
+-- VetCare | SQLite 3.37+ | criação não destrutiva, esquema versão 2.
 -- Cada conexão deve habilitar foreign_keys. Valores monetários são CENTAVOS.
 PRAGMA foreign_keys = ON;
 BEGIN;
@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS tutors (
 ) STRICT;
 CREATE TABLE IF NOT EXISTS pets (
  id INTEGER PRIMARY KEY,
- tutor_id INTEGER NOT NULL REFERENCES tutors(id) ON DELETE RESTRICT,
  name TEXT NOT NULL CHECK(length(trim(name)) BETWEEN 1 AND 80),
  species TEXT NOT NULL CHECK(species IN ('Cão','Gato','Ave','Outro')),
  breed TEXT NOT NULL DEFAULT '' CHECK(length(breed) <= 80),
@@ -23,6 +22,14 @@ CREATE TABLE IF NOT EXISTS pets (
  notes TEXT NOT NULL DEFAULT '' CHECK(length(notes) <= 4000),
  active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+) STRICT;
+-- Vínculo N:N. Arquivar o vínculo preserva a referência das consultas antigas.
+CREATE TABLE IF NOT EXISTS pet_tutors (
+ pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE RESTRICT,
+ tutor_id INTEGER NOT NULL REFERENCES tutors(id) ON DELETE RESTRICT,
+ active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
+ created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+ PRIMARY KEY(pet_id,tutor_id)
 ) STRICT;
 CREATE TABLE IF NOT EXISTS veterinarians (
  id INTEGER PRIMARY KEY,
@@ -44,6 +51,7 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE TABLE IF NOT EXISTS appointments (
  id INTEGER PRIMARY KEY,
  pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE RESTRICT,
+ accompanying_tutor_id INTEGER,
  veterinarian_id INTEGER NOT NULL REFERENCES veterinarians(id) ON DELETE RESTRICT,
  service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE RESTRICT,
  starts_at TEXT NOT NULL CHECK(length(starts_at)=16 AND strftime('%Y-%m-%dT%H:%M',starts_at,'+0 days') IS NOT NULL AND strftime('%Y-%m-%dT%H:%M',starts_at,'+0 days')=starts_at),
@@ -52,6 +60,8 @@ CREATE TABLE IF NOT EXISTS appointments (
  status TEXT NOT NULL DEFAULT 'Agendado' CHECK(status IN ('Agendado','Confirmado','Concluído','Cancelado')),
  notes TEXT NOT NULL DEFAULT '' CHECK(length(notes) <= 4000),
  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+,
+ FOREIGN KEY(pet_id,accompanying_tutor_id) REFERENCES pet_tutors(pet_id,tutor_id) ON DELETE RESTRICT
 ) STRICT;
 CREATE TABLE IF NOT EXISTS medical_records (
  id INTEGER PRIMARY KEY,
@@ -71,12 +81,30 @@ CREATE TABLE IF NOT EXISTS payments (
  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 ) STRICT;
 -- Índices nas FKs e na agenda evitam varreduras nas consultas mais frequentes.
-CREATE INDEX IF NOT EXISTS idx_pets_tutor ON pets(tutor_id);
+CREATE INDEX IF NOT EXISTS idx_pet_tutors_tutor ON pet_tutors(tutor_id,active);
+CREATE INDEX IF NOT EXISTS idx_appointments_companion ON appointments(accompanying_tutor_id);
 CREATE INDEX IF NOT EXISTS idx_agenda_vet ON appointments(veterinarian_id,starts_at);
 CREATE INDEX IF NOT EXISTS idx_agenda_pet ON appointments(pet_id,starts_at);
 CREATE INDEX IF NOT EXISTS idx_agenda_service ON appointments(service_id);
 CREATE INDEX IF NOT EXISTS idx_agenda_date ON appointments(starts_at,status);
 CREATE INDEX IF NOT EXISTS idx_payments_appointment ON payments(appointment_id);
+-- Novas consultas exigem um tutor ativo e vinculado ao animal.
+-- NULL é reservado aos registros anteriores à migração, não aos novos INSERTs.
+CREATE TRIGGER IF NOT EXISTS appointment_companion_insert BEFORE INSERT ON appointments
+BEGIN
+ SELECT RAISE(ABORT,'Selecione um tutor ativo vinculado ao paciente.')
+ WHERE NEW.accompanying_tutor_id IS NULL OR NOT EXISTS (
+ SELECT 1 FROM pet_tutors pt JOIN tutors t ON t.id=pt.tutor_id
+ WHERE pt.pet_id=NEW.pet_id AND pt.tutor_id=NEW.accompanying_tutor_id AND pt.active=1 AND t.active=1);
+END;
+CREATE TRIGGER IF NOT EXISTS appointment_companion_update BEFORE UPDATE OF pet_id,accompanying_tutor_id ON appointments
+WHEN NEW.pet_id IS NOT OLD.pet_id OR NEW.accompanying_tutor_id IS NOT OLD.accompanying_tutor_id
+BEGIN
+ SELECT RAISE(ABORT,'Selecione um tutor ativo vinculado ao paciente.')
+ WHERE NEW.accompanying_tutor_id IS NULL OR NOT EXISTS (
+ SELECT 1 FROM pet_tutors pt JOIN tutors t ON t.id=pt.tutor_id
+ WHERE pt.pet_id=NEW.pet_id AND pt.tutor_id=NEW.accompanying_tutor_id AND pt.active=1 AND t.active=1);
+END;
 -- Intervalos semiabertos [início,fim): consultas consecutivas são permitidas.
 CREATE TRIGGER IF NOT EXISTS appointment_no_overlap_insert BEFORE INSERT ON appointments
 WHEN NEW.status <> 'Cancelado'
@@ -130,5 +158,5 @@ CREATE VIEW IF NOT EXISTS appointment_balances AS
  FROM appointments a LEFT JOIN
  (SELECT appointment_id,SUM(amount_cents) AS received_cents FROM payments GROUP BY appointment_id) p
  ON p.appointment_id=a.id;
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
 COMMIT;

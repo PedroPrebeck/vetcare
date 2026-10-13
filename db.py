@@ -5,6 +5,51 @@ from pathlib import Path
 from flask import current_app, g
 
 ROOT = Path(__file__).resolve().parent
+SCHEMA_VERSION = 2
+
+
+def statements(script):
+    buffer = ""
+    for line in script.splitlines(True):
+        buffer += line
+        if sqlite3.complete_statement(buffer):
+            yield buffer
+            buffer = ""
+
+
+def migrate(conn):
+    """Migração transacional. O chamador preserva um backup antes de executar."""
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    if version > SCHEMA_VERSION:
+        raise ValueError("Banco de versão mais recente. Use uma aplicação compatível.")
+    if version == SCHEMA_VERSION:
+        return False
+    schema = (ROOT / "database/01_schema.sql").read_text(encoding="utf-8")
+    conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if version == 1:
+            migration = (ROOT / "database/05_migrate_tutors.sql").read_text(
+                encoding="utf-8"
+            )
+            for sql in statements(migration):
+                conn.execute(sql)
+        for sql in statements(schema):
+            clean = "\n".join(
+                line for line in sql.splitlines() if not line.lstrip().startswith("--")
+            ).strip()
+            if clean in ("BEGIN;", "COMMIT;", "PRAGMA foreign_keys = ON;"):
+                continue
+            conn.execute(sql)
+        if conn.execute("PRAGMA foreign_key_check").fetchone():
+            raise ValueError("Migração interrompida por vínculos inconsistentes.")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON")
+    return True
 
 
 def get_db():
@@ -33,18 +78,19 @@ def initialize(path, demo=False):
         raise ValueError("SQLite 3.37+ é necessário para tabelas STRICT.")
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
-        if conn.execute("PRAGMA user_version").fetchone()[0] > 1:
-            raise ValueError(
-                "Banco de versão mais recente. Use uma aplicação compatível."
-            )
+        version = conn.execute("PRAGMA user_version").fetchone()[0]
+        if version == 1:
+            backup = Path(str(path) + ".v1-backup.sqlite3")
+            if not backup.exists():
+                with sqlite3.connect(backup) as target:
+                    conn.backup(target)
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA journal_mode = WAL")
-        conn.executescript(
-            (ROOT / "database/01_schema.sql").read_text(encoding="utf-8")
-        )
+        migrate(conn)
         tables = (
             "tutors",
             "pets",
+            "pet_tutors",
             "veterinarians",
             "services",
             "appointments",
